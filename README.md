@@ -77,7 +77,8 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
   - Find Other Copies and Versions…: the duplicate report (below) for the selected papers
   - Open ePrint Page
 - **Tools → Update CryptoBib Database**: fetches the latest export.
-- **Tools → Find Duplicate Papers…** (or right-click a collection): the duplicate report for the library or the collection.
+- **Tools → Find Duplicate Papers…**: the duplicate report for the library.
+- Right-click a collection → **IACR**: the same commands for all papers of the collection (including its subcollections when **View → Show Items from Subcollections** is on), plus Copy Papers as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib… and Find Duplicate Papers…. Right-click a library (e.g. My Library) to run them on all its papers, after a confirmation.
 - Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
 - **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted and updated from CryptoBib automatically. ePrint lookup and download on save can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 

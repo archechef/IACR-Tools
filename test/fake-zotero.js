@@ -355,6 +355,16 @@ export function createFakeZotero({
 			constructor(params) {
 				super(collections, params);
 			}
+
+			/** Mirrors Zotero.Collection#getChildItems: the items directly in the collection. */
+			getChildItems(asIDs) {
+				const items = [...registry.values()].filter((item) => item.collections?.has(this.id) && !item.deleted);
+				return asIDs ? items.map((item) => item.id) : items;
+			}
+
+			getChildCollections() {
+				return [...collections.values()].filter((c) => c.parentID === this.id && !c.deleted);
+			}
 		},
 		Collections: {
 			getByLibrary: (libraryID) => [...collections.values()].filter((c) => c.libraryID === libraryID && !c.parentID),

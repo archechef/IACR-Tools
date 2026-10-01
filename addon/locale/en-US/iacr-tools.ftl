@@ -198,6 +198,12 @@ iacr-tools-latex-exported = { $count ->
        *[other] ; { $inCryptoBib } others are in CryptoBib.
     }
 
+## Commands on a collection or library
+
+iacr-tools-collection-empty = “{ $name }” holds no papers.
+iacr-tools-collection-confirm-library = { $action }: this applies to all { $count } papers in “{ $name }”. Continue?
+iacr-tools-collection-run = Continue
+
 ## Duplicate papers
 
 iacr-tools-dup-title = Duplicate Papers

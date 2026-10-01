@@ -483,13 +483,62 @@ export class IACRTools {
 	}
 
 	/** The same, for every paper in a collection. */
-	copyCollectionAsList(context) {
-		const { collection } = resolveImportTarget(this.Zotero, context);
+	async copyCollectionAsList(context) {
+		const { items, name } = await this.collectionPapers(context);
+		return this.copyAsList(items, name);
+	}
+
+	/**
+	 * The papers a collection menu command applies to: those of the collection
+	 * (with its subcollections when Zotero shows their items, View → Show Items
+	 * from Subcollections), or of the whole library when a library was
+	 * right-clicked.
+	 * @returns {Promise<{ items: any[], name: string, isLibrary: boolean, window: any }>}
+	 */
+	async collectionPapers(context) {
+		const { Zotero } = this;
+		const { window, libraryID, collection } = resolveImportTarget(Zotero, context);
+		const regular = (items) => items.filter((item) => item?.isRegularItem?.() && !item.deleted);
 		if (!collection) {
-			this.dialogs.alert(this.Zotero.getMainWindow(), this.l10n.format("copy-title"), this.l10n.format("copy-no-collection"));
-			return 0;
+			const items = regular(await Zotero.Items.getAll(libraryID, true, false));
+			return { items, name: Zotero.Libraries.get(libraryID)?.name ?? "", isLibrary: true, window };
 		}
-		return this.copyAsList(this.Zotero.Items.get(collection.getChildItems(true)), collection.name);
+		const recursive = Boolean(Zotero.Prefs.get("recursiveCollections"));
+		const ids = new Set();
+		const visit = (current) => {
+			for (const id of current.getChildItems(true)) ids.add(id);
+			if (recursive) for (const child of current.getChildCollections(false)) visit(child);
+		};
+		visit(collection);
+		return { items: regular(Zotero.Items.get([...ids])), name: collection.name, isLibrary: false, window };
+	}
+
+	/**
+	 * Collection menu: runs a menu command on the collection's papers, or, for
+	 * a library, on all of its papers after a confirmation.
+	 * @param {string} commandId
+	 */
+	async runCollectionCommand(commandId, context) {
+		const { l10n } = this;
+		const { items, name, isLibrary, window } = await this.collectionPapers(context);
+		if (!items.length) {
+			this.dialogs.alert(window, l10n.format(`progress-${commandId}`), l10n.format("collection-empty", { name }));
+			return null;
+		}
+		if (isLibrary) {
+			const answer = this.dialogs.confirm(window, {
+				title: l10n.format(`progress-${commandId}`),
+				text: l10n.format("collection-confirm-library", { action: l10n.format(`progress-${commandId}`), count: items.length, name }),
+				accept: l10n.format("collection-run"),
+			});
+			if (!answer.confirmed) return null;
+		}
+		return this.runCommand(commandId, items);
+	}
+
+	/** Collection menu: a \cite command for the collection's papers. */
+	async copyCollectionLatexCitation(context) {
+		return this.copyLatexCitation((await this.collectionPapers(context)).items);
 	}
 
 	/**
@@ -557,13 +606,9 @@ export class IACRTools {
 	}
 
 	/** The same, for every paper in a collection. */
-	exportCollectionBibTeX(context) {
-		const { collection } = resolveImportTarget(this.Zotero, context);
-		if (!collection) {
-			this.dialogs.alert(this.Zotero.getMainWindow(), this.l10n.format("latex-export-title"), this.l10n.format("copy-no-collection"));
-			return null;
-		}
-		return this.exportBibTeXNotInCryptoBib(this.Zotero.Items.get(collection.getChildItems(true)), collection.name);
+	async exportCollectionBibTeX(context) {
+		const { items, name } = await this.collectionPapers(context);
+		return this.exportBibTeXNotInCryptoBib(items, name);
 	}
 
 	/**
@@ -586,8 +631,9 @@ export class IACRTools {
 			where = l10n.format("dup-selection", { count: selected.length });
 		}
 		else if (context && target.collection) {
-			scope = new Set(target.collection.getChildItems(true));
-			where = target.collection.name;
+			const papers = await this.collectionPapers(context);
+			scope = new Set(papers.items.map((item) => item.id));
+			where = papers.name;
 		}
 		const progress = new BatchProgress(Zotero, l10n, "progress-find-duplicates");
 		progress.status("dup-scanning");

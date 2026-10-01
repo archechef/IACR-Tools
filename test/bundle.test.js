@@ -162,9 +162,11 @@ function createEnvironment(dataDir) {
 	return { Zotero, Services, IOUtils, PathUtils, ChromeUtils, Cc, Ci, registered, defaults, timers };
 }
 
-test("the built plugin starts, registers its UI and runs its commands", { skip: !existsSync(addonDir) }, async () => {
+test("the built plugin starts, registers its UI and runs its commands", { skip: !existsSync(addonDir) }, async (t) => {
 	const dataDir = mkdtempSync(join(tmpdir(), "iacr-tools-bundle-"));
 	const env = createEnvironment(dataDir);
+	// Clear the long-running timers even when an assertion fails, so the run ends.
+	t.after(() => env.timers.clearAll());
 	const scope = vm.createContext({
 		Zotero: env.Zotero, Services: env.Services, IOUtils: env.IOUtils, PathUtils: env.PathUtils,
 		ChromeUtils: env.ChromeUtils, Cc: env.Cc, Ci: env.Ci, APP_SHUTDOWN: 2, console,
@@ -241,7 +243,7 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 		pickFile: async () => null,
 		// Answer the folder import's checkbox with "no" and the list's with "yes"
 		// (the fake Localization formats a message to its id).
-		confirm: (window, options) => (asked.push(options), { confirmed: true, secondary: false, checked: options.checkLabel.includes("list") }),
+		confirm: (window, options) => (asked.push(options), { confirmed: true, secondary: false, checked: Boolean(options.checkLabel?.includes("list")) }),
 		alert: (window, title, text) => asked.push({ title, text }),
 	};
 	const fileMenu = env.registered.menus.find((m) => m.target === "main/menubar/file");
@@ -314,7 +316,8 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	const toolsMenu = env.registered.menus.find((m) => m.target === "main/menubar/tools");
 	const findInLibrary = toolsMenu.menus.find((m) => m.l10nID?.endsWith("menu-find-library-duplicates"));
 	const collectionMenu = env.registered.menus.find((m) => m.target === "main/library/collection");
-	assert.ok(collectionMenu.menus.some((m) => m.l10nID?.endsWith("menu-find-collection-duplicates")));
+	const collectionSubmenu = collectionMenu.menus.find((m) => m.menuType === "submenu").menus;
+	assert.ok(collectionSubmenu.some((m) => m.l10nID?.endsWith("menu-find-collection-duplicates")));
 	assert.ok(submenu.some((m) => m.l10nID?.endsWith("menu-find-duplicates")));
 	const copyOfPaper = env.Zotero.addItem("bookSection", {
 		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", date: "2008", extra: "DOI: 10.1007/978-3-540-78967-3_6" },
@@ -327,6 +330,31 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(reportWindow.url, `chrome://${PLUGIN.chromePackage}/content/duplicates.xhtml`);
 	const reportGroup = reportWindow.io.state.groups.find((g) => g.clusters.flat().some((p) => p.id === copyOfPaper.id));
 	assert.ok(reportGroup, "the copy is reported with the paper it duplicates");
+
+	// The collection menu offers every paper command for the papers of a collection.
+	for (const { id } of plugin.commands) {
+		assert.ok(collectionSubmenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `collection command ${id}`);
+	}
+	for (const id of ["copy-collection-list", "copy-latex", "export-collection-bibtex"]) {
+		assert.ok(collectionSubmenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `collection entry ${id}`);
+	}
+	const inCollection = (await plugin.collectionPapers({ collectionTreeRow: { isCollection: () => true, ref: target } })).items;
+	assert.deepEqual(inCollection, matching, "the collection's papers (attachments left out)");
+	const syncCollection = collectionSubmenu.find((m) => m.l10nID?.endsWith("menu-sync-cryptobib"));
+	await syncCollection.onCommand(null, { collectionTreeRow: { isCollection: () => true, ref: target } });
+	const collectionRun = env.registered.dialogs.at(-1).io.state;
+	assert.equal(collectionRun.headline, `${PLUGIN.l10nPrefix}-progress-sync-cryptobib`);
+	assert.deepEqual([collectionRun.total, collectionRun.done], [inCollection.length, inCollection.length]);
+
+	// On a library (right-clicked, so no collection is selected) it covers all
+	// papers of the library, after a confirmation.
+	const paneWindow = env.Zotero.getMainWindow;
+	env.Zotero.getMainWindow = () => ({ ...mainWindow, ZoteroPane: { getSelectedCollection: () => null, getSelectedLibraryID: () => 1 } });
+	const libraryPapers = (await env.Zotero.Items.getAll(1)).filter((item) => item.isRegularItem() && !item.deleted);
+	await syncCollection.onCommand(null, { collectionTreeRow: { isCollection: () => false, ref: { libraryID: 1 } } });
+	assert.match(asked.at(-1).text, new RegExp(`collection-confirm-library .*"count":${libraryPapers.length}`));
+	assert.equal(env.registered.dialogs.at(-1).io.state.total, libraryPapers.length);
+	env.Zotero.getMainWindow = paneWindow;
 
 	// Preferences: the number of parallel fetches is kept within bounds; without
 	// the progress window, commands report in Zotero's pop-up.

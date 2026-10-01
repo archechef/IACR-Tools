@@ -97,6 +97,12 @@ export function registerMenus({ Zotero, rootURI, plugin }) {
 		target: "main/menubar/file",
 		menus: importMenus,
 	});
+	// The same commands for all papers of a collection (or of a library).
+	const collectionCommandItems = plugin.commands.map((command) => ({
+		menuType: "menuitem",
+		l10nID: L10n.id(`menu-${command.id}`),
+		onCommand: (event, context) => plugin.runCollectionCommand(command.id, context),
+	}));
 	const collectionMenu = Zotero.MenuManager.registerMenu({
 		menuID: `${PLUGIN.l10nPrefix}-collection`,
 		pluginID: PLUGIN.id,
@@ -104,22 +110,33 @@ export function registerMenus({ Zotero, rootURI, plugin }) {
 		menus: [
 			...importMenus,
 			{
-				menuType: "menuitem",
-				l10nID: L10n.id("menu-copy-collection-list"),
+				menuType: "submenu",
+				l10nID: L10n.id("menu-root"),
 				icon: rootURI + ASSETS.icon,
-				onCommand: (event, context) => plugin.copyCollectionAsList(context),
-			},
-			{
-				menuType: "menuitem",
-				l10nID: L10n.id("menu-export-collection-bibtex"),
-				icon: rootURI + ASSETS.icon,
-				onCommand: (event, context) => plugin.exportCollectionBibTeX(context),
-			},
-			{
-				menuType: "menuitem",
-				l10nID: L10n.id("menu-find-collection-duplicates"),
-				icon: rootURI + ASSETS.icon,
-				onCommand: (event, context) => plugin.findDuplicates({ context }),
+				menus: [
+					...collectionCommandItems,
+					{ menuType: "separator" },
+					{
+						menuType: "menuitem",
+						l10nID: L10n.id("menu-copy-collection-list"),
+						onCommand: (event, context) => plugin.copyCollectionAsList(context),
+					},
+					{
+						menuType: "menuitem",
+						l10nID: L10n.id("menu-copy-latex"),
+						onCommand: (event, context) => plugin.copyCollectionLatexCitation(context),
+					},
+					{
+						menuType: "menuitem",
+						l10nID: L10n.id("menu-export-collection-bibtex"),
+						onCommand: (event, context) => plugin.exportCollectionBibTeX(context),
+					},
+					{
+						menuType: "menuitem",
+						l10nID: L10n.id("menu-find-collection-duplicates"),
+						onCommand: (event, context) => plugin.findDuplicates({ context }),
+					},
+				],
 			},
 		],
 	});
