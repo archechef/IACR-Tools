@@ -4,7 +4,8 @@
  */
 
 const escapeRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-const lineRegExp = (key) => new RegExp(`^\\s*${escapeRegExp(key)}\\s*:\\s*(.*?)\\s*$`, "im");
+// [ \t] rather than \s: in multiline mode \s would run on into the next line.
+const lineRegExp = (key) => new RegExp(`^[ \\t]*${escapeRegExp(key)}[ \\t]*:[ \\t]*(.*?)[ \\t\\r]*$`, "im");
 
 /** @returns {string | null} */
 export function getExtraField(extra, key) {
@@ -28,8 +29,4 @@ export function setExtraField(extra, key, value) {
 		lines.push(`${key}: ${value}`);
 	}
 	return lines.join("\n").trim();
-}
-
-export function removeExtraField(extra, key) {
-	return setExtraField(extra, key, null);
 }

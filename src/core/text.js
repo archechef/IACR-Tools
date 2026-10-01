@@ -23,18 +23,33 @@ export function normalizeText(text) {
 }
 
 /**
+ * Memoizes a string → string function. Matching scores every library item or
+ * CryptoBib candidate against a query, so the same titles and names are
+ * normalized over and over; the cache is simply dropped when it is full.
+ * @param {(text: string) => string} fn
+ */
+function memoized(fn, maxSize = MATCHING.keyCacheSize) {
+	const cache = new Map();
+	return (text) => {
+		const input = text ?? "";
+		let key = cache.get(input);
+		if (key === undefined) {
+			if (cache.size >= maxSize) cache.clear();
+			key = fn(input);
+			cache.set(input, key);
+		}
+		return key;
+	};
+}
+
+/**
  * Key used for exact title lookups. Version notes such as "(Extended Abstract)"
  * are dropped and spaces removed, so that "Rabin-Williams", "Rabin Williams" and
  * "RabinWilliams" collide.
+ * @type {(title: string | undefined) => string}
  */
-export function titleKey(title) {
-	return normalizeText((title ?? "").replace(MATCHING.titleVersionNote, "")).replace(/ /g, "");
-}
-
-/** Same as {@link titleKey} for a LaTeX-encoded title. */
-export function latexTitleKey(latexTitle) {
-	return titleKey(latexToText(latexTitle));
-}
+export const titleKey = memoized((title) =>
+	normalizeText(title.replace(MATCHING.titleVersionNote, "")).replace(/ /g, ""));
 
 /** Sørensen–Dice coefficient over character bigrams of the compact title keys. */
 export function titleSimilarity(a, b) {
@@ -149,10 +164,8 @@ export function parseDisplayName(name) {
 }
 
 /** Key used to compare people across sources: normalized last name. */
-export function lastNameKey(lastName) {
-	const words = normalizeText(lastName).split(" ").filter((w) => !PARTICLES.has(w));
-	return words.join("");
-}
+export const lastNameKey = memoized((lastName) =>
+	normalizeText(lastName).split(" ").filter((w) => !PARTICLES.has(w)).join(""));
 
 /**
  * Fraction of the smaller author list whose last names appear in the other list.

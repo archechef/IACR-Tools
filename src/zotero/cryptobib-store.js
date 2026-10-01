@@ -15,6 +15,16 @@ import { buildRecords, CryptoBibIndex } from "../core/cryptobib.js";
 
 /** @typedef {"downloading" | "indexing" | "ready"} StoreStatus */
 
+const ENTRY_START = /^[ \t]*@(?!string\b|comment\b|preamble\b)[A-Za-z]+[ \t]*[{(]/gim;
+const STRING_DEFINITION = /^[ \t]*@string[ \t]*[{(]/im;
+
+/** Number of BibTeX entries (not @string / @comment / @preamble) in a text. */
+function countEntries(text) {
+	let count = 0;
+	for (const _ of (text ?? "").matchAll(ENTRY_START)) count++;
+	return count;
+}
+
 export class CryptoBibStore {
 	/** @type {Promise<CryptoBibIndex> | null} */
 	#loading = null;
@@ -138,13 +148,32 @@ export class CryptoBibStore {
 			this.log(`Downloading ${baseURL}${name}`);
 			return this.http.getText(baseURL + name, { timeout: NETWORK.downloadTimeoutMs });
 		}));
+		const entries = await this.#checkDownload(names, contents);
 		for (const [i, name] of names.entries()) {
 			await this.files.writeText(this.#path(name), contents[i]);
 		}
 		for (const level of CRYPTOBIB.abbrevLevels) {
 			await this.files.writeText(this.#path(CRYPTOBIB.recordsFile(level)), "");
 		}
-		await this.files.writeText(this.#path(CRYPTOBIB.metaFile), JSON.stringify({ downloadedAt: this.now() }));
+		await this.files.writeText(this.#path(CRYPTOBIB.metaFile), JSON.stringify({ downloadedAt: this.now(), entries }));
+	}
+
+	/**
+	 * Rejects a download that is not CryptoBib (an error page, an empty file) or
+	 * that lost most of its entries, so that it never replaces a good copy.
+	 * @returns {Promise<number>} number of entries in the main file
+	 */
+	async #checkDownload(names, contents) {
+		const entries = countEntries(contents[0]);
+		if (!entries) throw new Error(`${names[0]} contains no BibTeX entries`);
+		for (const [i, name] of names.entries()) {
+			if (i > 0 && !STRING_DEFINITION.test(contents[i])) throw new Error(`${name} contains no @string definitions`);
+		}
+		const previous = Number((await this.#readMeta())?.entries) || 0;
+		if (entries < previous * CRYPTOBIB.minEntriesRatio) {
+			throw new Error(`${names[0]} has only ${entries} entries (previously ${previous}); keeping the old copy`);
+		}
+		return entries;
 	}
 
 	async #buildIndex(onStatus, { rebuild }) {

@@ -80,6 +80,8 @@ export const CRYPTOBIB = Object.freeze({
 	metaFile: "meta.json",
 	/** Parsed records are cached as JSON; bump the version when the record format changes. */
 	recordsFile: (level) => `records-v1-abbrev${level}.json`,
+	/** A refreshed download must keep at least this fraction of the previous entries. */
+	minEntriesRatio: 0.5,
 	/** Key prefix of ePrint entries in CryptoBib (e.g. "EPRINT:Bernstein08"). */
 	eprintKeyPrefix: "EPRINT:",
 	/**
@@ -118,6 +120,8 @@ export const MATCHING = Object.freeze({
 	minSharedPrefix: 24,
 	/** Titles whose normalized form is shorter than this must match exactly (with authors). */
 	minTitleLength: 12,
+	/** Normalized titles and names kept in memory for repeated comparisons. */
+	keyCacheSize: 200_000,
 	/** Lower-case name particles that belong to the last name. */
 	nameParticles: ["von", "van", "de", "der", "den", "di", "da", "du", "le", "la", "del", "della", "dos", "das", "ter", "ten", "zu", "af", "al", "el", "bin", "ibn"],
 });

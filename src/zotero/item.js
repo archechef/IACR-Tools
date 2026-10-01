@@ -23,11 +23,6 @@ export class ItemWrapper {
 		return this.Zotero.ItemTypes.getName(this.item.itemTypeID);
 	}
 
-	/** Whether any edit was made since construction (or the last save). */
-	get changed() {
-		return this.#changed;
-	}
-
 	/**
 	 * Resolves a (base) field name to the name used by this item's type, e.g.
 	 * "publicationTitle" → "proceedingsTitle"; null if the type lacks the field.

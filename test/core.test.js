@@ -11,6 +11,7 @@ import { formatEprintId, parseEprintId } from "../src/core/eprint.js";
 import { buildRecords, CryptoBibIndex } from "../src/core/cryptobib.js";
 import { toZoteroData } from "../src/core/mapping.js";
 import { bestMatch } from "../src/core/matching.js";
+import { getExtraField, setExtraField } from "../src/core/extra.js";
 
 const fixture = (name) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
 
@@ -153,4 +154,28 @@ test("version notes do not prevent title matches", () => {
 	assert.equal(titleKey("Threshold RSA (Extended Abstract)"), titleKey("Threshold RSA"));
 	assert.equal(titleKey("Threshold RSA: Full Version."), titleKey("Threshold RSA"));
 	assert.equal(titleKey("Invited Talk: Threshold RSA"), titleKey("Invited Talk: Threshold RSA"));
+});
+
+test("an empty Extra line does not take the value of the next line", () => {
+	const extra = "Citation Key:\nDOI: 10.1007/978-3-540-78967-3_5";
+	assert.equal(getExtraField(extra, "Citation Key"), "");
+	assert.equal(getExtraField(extra, "DOI"), "10.1007/978-3-540-78967-3_5");
+	assert.equal(getExtraField("IACR ePrint: 2008/045\r\nDOI: 10.1/x", "IACR ePrint"), "2008/045");
+	assert.equal(setExtraField(extra, "Citation Key", "EC:Bernstein08"), "Citation Key: EC:Bernstein08\nDOI: 10.1007/978-3-540-78967-3_5");
+});
+
+test("matching a large library stays fast", () => {
+	const words = "secure efficient lattice based threshold signatures from learning with errors zero knowledge".split(" ");
+	const library = Array.from({ length: 10_000 }, (_, i) => ({
+		title: `${Array.from({ length: 8 }, (_, j) => words[(i * 7 + j * 3) % words.length]).join(" ")} ${i}`,
+		authors: ["Smith", "Lee"],
+		year: 2020,
+	}));
+	const wanted = library[4321];
+	const start = performance.now();
+	for (let k = 0; k < 50; k++) bestMatch({ title: `An unrelated paper ${k}`, authors: ["Nobody"], year: 2020 }, library);
+	const found = bestMatch({ title: wanted.title.toUpperCase(), authors: ["Lee"], year: 2020 }, library);
+	assert.equal(found?.candidate, wanted);
+	// About 2.5 ms per lookup here; the old matcher needed ~160 ms.
+	assert.ok((performance.now() - start) / 51 < 40, "lookup took too long");
 });

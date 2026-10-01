@@ -314,6 +314,31 @@ test("the store downloads once, caches parsed records and refreshes stale data i
 	store.dispose();
 });
 
+test("a download that is not CryptoBib, or lost most of its entries, never replaces the good copy", async () => {
+	assert.equal((await env.store.getIndex()).size, 6);
+	const serve = (main, abbrev = fixture("abbrev0.bib")) => ({
+		...createFakeHttp(),
+		async getText(url) {
+			return url.endsWith(CRYPTOBIB.mainFile) ? main : abbrev;
+		},
+	});
+	const storeWith = (http) => new CryptoBibStore({ http, files: nodeFiles, prefs: env.prefs, dataDirectory: env.dataDirectory, timers: env.timers, log: env.log });
+
+	const errorPage = storeWith(serve("<!DOCTYPE html><html><body>Rate limit exceeded</body></html>"));
+	await assert.rejects(errorPage.update(), /no BibTeX entries/);
+	const noMacros = storeWith(serve(fixture("crypto.bib"), "404: Not Found"));
+	await assert.rejects(noMacros.update(), /no @string definitions/);
+	const firstEntry = fixture("crypto.bib").search(/^@(?!string)/im);
+	const truncated = storeWith(serve(fixture("crypto.bib").slice(0, fixture("crypto.bib").indexOf("\n@", firstEntry + 1))));
+	await assert.rejects(truncated.update(), /only 1 entries \(previously 6\)/);
+
+	// The cache on disk is untouched: a fresh store still sees all six entries.
+	const meta = JSON.parse(await readFile(join(env.dataDirectory, "iacr-tools", CRYPTOBIB.metaFile), "utf8"));
+	assert.equal(meta.entries, 6);
+	assert.equal((await storeWith(createFakeHttp()).getIndex()).size, 6);
+	for (const store of [errorPage, noMacros, truncated]) store.dispose();
+});
+
 test("every Fluent id used by the plugin exists in the locale file", () => {
 	const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 	const defined = new Set([...read("addon/locale/en-US/iacr-tools.ftl").matchAll(/^([a-z0-9-]+) =/gm)].map((m) => m[1]));

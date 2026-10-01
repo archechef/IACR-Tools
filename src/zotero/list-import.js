@@ -50,11 +50,6 @@ export class ListImporter {
 		this.log = log;
 	}
 
-	/** Reads a list from a file. */
-	readFile(path) {
-		return this.files.readText(path);
-	}
-
 	/**
 	 * @param {import("../core/list.js").ListEntry[]} entries
 	 * @param {ListOptions} options
@@ -63,10 +58,11 @@ export class ListImporter {
 	 */
 	async run(entries, options, { onEntryDone = () => {} } = {}) {
 		const resume = this.suspendAutoProcessing();
-		const index = await new LibraryIndex({ Zotero: this.Zotero, files: this.files, eprintKey: this.eprintKey() })
-			.load(options.libraryID);
 		const summary = [];
 		try {
+			// The list import compares papers only, never files.
+			const index = await new LibraryIndex({ Zotero: this.Zotero, files: this.files, eprintKey: this.eprintKey() })
+				.load(options.libraryID, { files: false });
 			for (const entry of entries) {
 				/** @type {ListResult} */
 				let result;

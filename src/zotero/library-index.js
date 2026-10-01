@@ -41,13 +41,15 @@ export class LibraryIndex {
 	/**
 	 * Indexes every regular item and PDF attachment of a library (trash excluded).
 	 * @param {number} libraryID
+	 * @param {{ files?: boolean }} [options] files: false skips the attachments,
+	 *   for callers that only use {@link findPaper} / {@link findReference}.
 	 */
-	async load(libraryID) {
+	async load(libraryID, { files = true } = {}) {
 		const items = await this.Zotero.Items.getAll(libraryID, false, false);
 		for (const item of items) {
 			if (item.deleted) continue;
 			if (item.isRegularItem()) this.addPaper(item);
-			else if (item.isFileAttachment?.() && item.isPDFAttachment?.()) await this.#addAttachment(item);
+			else if (files && item.isFileAttachment?.() && item.isPDFAttachment?.()) await this.#addAttachment(item);
 		}
 		return this;
 	}

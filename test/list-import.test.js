@@ -305,3 +305,42 @@ test("a wrong ePrint id falls back to the title written behind it", async () => 
 	assert.equal(results[0].result.status, "added");
 	assert.equal(results[0].result.item.getField("citationKey"), "ACISP:GHMRS22");
 });
+
+/** A ListImporter over the test environment, with its own files and auto-processing hooks. */
+function importerWith({ files, suspendAutoProcessing }) {
+	const { pipeline, finder, http, store } = env.importer;
+	return new ListImporter({
+		Zotero: env.Zotero, http, files, store, pipeline, finder, log: () => {},
+		eprintKey: () => "IACR ePrint",
+		suspendAutoProcessing,
+	});
+}
+
+test("automatic processing resumes even when the library cannot be read", async () => {
+	let suspended = 0;
+	const importer = importerWith({
+		files: env.importer.files,
+		suspendAutoProcessing: () => {
+			suspended++;
+			return () => suspended--;
+		},
+	});
+	env.Zotero.Items.getAll = async () => {
+		throw new Error("database is locked");
+	};
+	await assert.rejects(importer.run(parseList("EC:Bernstein08"), env.options()), /database is locked/);
+	assert.equal(suspended, 0);
+});
+
+test("the list import does not look at the library's files", async () => {
+	const paper = env.Zotero.addItem("journalArticle", { fields: { title: "Some Paper" } });
+	env.Zotero.addPDF({ path: "/library/some-paper.pdf", parentItemID: paper.id });
+	let stats = 0;
+	const importer = importerWith({
+		files: { ...env.importer.files, stat: async () => (stats++, { type: "regular", size: 1 }) },
+		suspendAutoProcessing: () => () => {},
+	});
+	const [{ result }] = await importer.run(parseList("EC:Bernstein08"), env.options());
+	assert.equal(result.status, "added");
+	assert.equal(stats, 0);
+});

@@ -45,19 +45,33 @@ export function scoreCandidate(query, candidate, { yearTolerance = MATCHING.year
 	}
 
 	const overlap = authorOverlap(query.authors ?? [], candidate.authors ?? []);
-	const similarity = overlap !== null && titleExtends(query.title, candidate.title)
-		? Math.max(MATCHING.titleSimilarity, titleSimilarity(query.title, candidate.title))
-		: titleSimilarity(query.title, candidate.title);
 	// Short titles ("Short E-Cash") are only trusted when identical and backed by authors.
 	const isShort = titleKey(query.title).length < MATCHING.minTitleLength;
+	if (overlap === null ? isShort : overlap < MATCHING.authorOverlap) return null;
 	const requiredSimilarity = isShort ? 1
 		: overlap === null ? MATCHING.titleSimilarityWithoutAuthors
 		: MATCHING.titleSimilarity;
+	const extendsTitle = overlap !== null && titleExtends(query.title, candidate.title);
+	// Cheap rejection first: most candidates of a library scan are nowhere near.
+	if (!extendsTitle && similarityBound(query.title, candidate.title) < requiredSimilarity) return null;
+	const similarity = extendsTitle
+		? Math.max(MATCHING.titleSimilarity, titleSimilarity(query.title, candidate.title))
+		: titleSimilarity(query.title, candidate.title);
 	if (similarity < requiredSimilarity) return null;
-	if (overlap === null ? isShort : overlap < MATCHING.authorOverlap) return null;
 
 	const score = overlap === null ? similarity : (similarity + overlap) / 2;
 	return { score, method: similarity === 1 ? "title" : "fuzzy-title" };
+}
+
+/**
+ * Upper bound of {@link titleSimilarity} from the key lengths alone: at most
+ * min(|x|, |y|) - 1 bigrams can be shared.
+ */
+function similarityBound(a, b) {
+	const x = titleKey(a).length;
+	const y = titleKey(b).length;
+	if (x === y) return 1;
+	return (2 * (Math.min(x, y) - 1)) / (x + y - 2);
 }
 
 /**

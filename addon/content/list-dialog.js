@@ -31,8 +31,10 @@
 	byId("cancel").addEventListener("click", () => finish("cancel"));
 	window.addEventListener("keydown", (event) => {
 		if (event.key === "Escape") finish("cancel");
-		// Enter accepts from anywhere but the text area, where it starts a new line.
-		if (event.key === "Enter" && (event.target !== text || event.metaKey || event.ctrlKey)) finish("add");
+		// Enter accepts from the checkbox, and from the text area with Ctrl/Cmd (plain
+		// Enter starts a new line there). A focused button handles Enter itself.
+		if (event.key !== "Enter" || event.target.localName === "button") return;
+		if (event.target !== text || event.metaKey || event.ctrlKey) finish("add");
 	});
 
 	// Tells the caller that the dialog is working; without this it falls back to
