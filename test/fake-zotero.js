@@ -80,7 +80,21 @@ export class FakeItem {
 		this.collections = new Set();
 		this.parentItemID = null;
 		this.saveCount = 0;
+		/** @type {Set<string>} keys of related items */
+		this.related = new Set();
 		for (const [name, value] of Object.entries(fields)) this.setField(name, value);
+	}
+
+	get relatedItems() {
+		return [...this.related];
+	}
+
+	/** Mirrors Zotero.Item#addRelatedItem: false if already related. */
+	addRelatedItem(item) {
+		if (item.libraryID !== this.libraryID) throw new Error("Related items must be in the same library");
+		if (this.related.has(item.key)) return false;
+		this.related.add(item.key);
+		return true;
 	}
 
 	isFileAttachment() {
@@ -178,20 +192,37 @@ export class FakeItem {
 	}
 }
 
+/** An attachment downloaded from a URL (Zotero.Attachments.importFromURL). */
 class FakeAttachment {
-	constructor({ url, title, contentType }) {
+	constructor({ url, title, contentType, dateAdded = "2026-01-01 00:00:00" }) {
 		this.id = nextID++;
 		this.url = url;
 		this.title = title;
 		this.contentType = contentType;
+		this.dateAdded = dateAdded;
+		this.deleted = false;
+		this.saveCount = 0;
 	}
 
 	getField(name) {
-		return name === "url" ? this.url : "";
+		return name === "url" ? this.url : name === "title" ? this.title : "";
+	}
+
+	setField(name, value) {
+		if (name !== "title") throw new Error(`Cannot set ${name} on an attachment`);
+		this.title = value;
+	}
+
+	getFilePath() {
+		return `/storage/${this.id}.pdf`;
 	}
 
 	isPDFAttachment() {
 		return this.contentType === "application/pdf";
+	}
+
+	async saveTx() {
+		this.saveCount++;
 	}
 }
 
@@ -283,7 +314,10 @@ class FakeCollection {
  * @param {(attachment: FakeFileAttachment) => string} [options.fullText]
  * @param {(path: string) => Promise<string>} [options.storeFile]  Copies an imported file into "storage".
  */
-export function createFakeZotero({ recognize = () => null, fullText = () => "", storeFile = async (path) => path, clipboard = "", translateDOI = () => null } = {}) {
+export function createFakeZotero({
+	recognize = () => null, fullText = () => "", storeFile = async (path) => path, clipboard = "", translateDOI = () => null,
+	download = (url) => `PDF of ${url}`, now = () => "2026-10-01 12:00:00",
+} = {}) {
 	const registry = new Map();
 	const collections = new Map();
 	const observers = new Map();
@@ -354,9 +388,10 @@ export function createFakeZotero({ recognize = () => null, fullText = () => "", 
 				return new FakeFileAttachment(registry, { path: file, linked: true, collections: ids });
 			},
 			async importFromURL({ parentItemID, url, title, contentType }) {
-				const attachment = new FakeAttachment({ url, title, contentType });
+				const attachment = new FakeAttachment({ url, title, contentType, dateAdded: now() });
 				registry.set(attachment.id, attachment);
 				registry.get(parentItemID).attachments.push(attachment);
+				zotero.files.set(attachment.getFilePath(), download(url));
 				return attachment;
 			},
 		},
@@ -368,7 +403,34 @@ export function createFakeZotero({ recognize = () => null, fullText = () => "", 
 		},
 		/** Test helper: everything the plugin put on the clipboard. */
 		copied: [],
+		/** Test helper: contents of downloaded files, by path. */
+		files: new Map(),
+		/** Test helper: the translator ids the BibTeX exports used. */
+		exports: [],
 		Translate: {
+			/** A BibTeX export: "@type{key," with the item's citation key or "<lastname><year>". */
+			Export: class {
+				setItems(items) {
+					this.items = items;
+				}
+
+				setTranslator(id) {
+					this.translatorID = id;
+				}
+
+				setHandler(name, handler) {
+					if (name === "done") this.done = handler;
+				}
+
+				async translate() {
+					zotero.exports.push(this.translatorID);
+					const keyOf = (item) => item.getField("citationKey")
+						|| /^Citation Key: *(.+)$/m.exec(item.getField("extra"))?.[1]
+						|| `${(item.creators[0]?.lastName ?? "anon").toLowerCase()}${item.getField("year")}`;
+					this.string = this.items.map((item) => `@${item.itemType}{${keyOf(item)},\n  title = {${item.getField("title")}},\n}\n`).join("\n");
+					this.done(this, true);
+				}
+			},
 			Search: class {
 				setIdentifier(identifier) {
 					this.identifier = identifier;

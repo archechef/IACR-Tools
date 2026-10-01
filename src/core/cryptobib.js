@@ -174,9 +174,11 @@ export class CryptoBibIndex {
 	/**
 	 * Finds the published (non-ePrint) version of a reference.
 	 * @param {import("./matching.js").Reference} query
+	 * @param {import("./matching.js").MatchOptions} [options] e.g. `{ yearTolerance: null }`
+	 *   for a preprint, which may predate its publication by years.
 	 */
-	findPublication(query) {
-		return bestMatch(query, this.#publications.candidates(query));
+	findPublication(query, options) {
+		return bestMatch(query, this.#publications.candidates(query), options);
 	}
 
 	/**

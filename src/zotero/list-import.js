@@ -8,7 +8,7 @@
  */
 import { eprintPaperFromPage } from "../core/eprint-page.js";
 import { eprintIdOf } from "../core/mapping.js";
-import { EPRINT, NETWORK } from "../config.js";
+import { EPRINT, PREFS } from "../config.js";
 import { mapConcurrent, serialized, serializedByKey } from "../core/concurrency.js";
 import { createItemFromEprintPaper, createItemFromRecord } from "./create-item.js";
 import { LibraryIndex } from "./library-index.js";
@@ -36,10 +36,12 @@ export class ListImporter {
 	 * @param {import("./pipeline.js").Pipeline} deps.pipeline
 	 * @param {import("./eprint-sources.js").EprintFinder} deps.finder
 	 * @param {() => string} deps.eprintKey
+	 * @param {() => number} [deps.concurrency]  Entries looked up at the same time.
 	 * @param {() => () => void} deps.suspendAutoProcessing
 	 * @param {(msg: string) => void} deps.log
 	 */
-	constructor({ Zotero, http, files, store, pipeline, finder, eprintKey, suspendAutoProcessing, log }) {
+	constructor({ Zotero, http, files, store, pipeline, finder, eprintKey, concurrency = () => PREFS.concurrency.default, suspendAutoProcessing, log }) {
+		this.concurrency = concurrency;
 		this.Zotero = Zotero;
 		this.http = http;
 		this.files = files;
@@ -67,7 +69,7 @@ export class ListImporter {
 			const steps = { place: serialized(), perItem: serializedByKey() };
 			// Entries are looked up and their PDFs downloaded in parallel; results
 			// are reported as they finish and returned in list order.
-			const summary = await mapConcurrent(entries, NETWORK.concurrency, async (entry) => {
+			const summary = await mapConcurrent(entries, this.concurrency(), async (entry) => {
 				/** @type {ListResult} */
 				let result;
 				try {

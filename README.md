@@ -4,7 +4,11 @@ A Zotero 8–10 plugin for cryptographers:
 
 - **Springer conference papers become “Conference Paper” items.** Springer publishes proceedings (LNCS, CCIS, …) as books, so Zotero saves their papers as *Book Section*. The plugin converts them. `bookTitle` becomes `proceedingsTitle`, and a DOI stored in Extra moves to the DOI field.
 - **Metadata comes from [CryptoBib](https://cryptobib.di.ens.fr).** Items are matched by DOI, then by title and authors (with fuzzy matching). CryptoBib's values then replace or fill in the title, authors, editors, proceedings title, conference name (`EUROCRYPT 2008`), volume, pages, series, publisher, venue, date and DOI. The CryptoBib key (`EC:Bernstein08`) is stored as the citation key.
-- **ePrint versions.** The plugin finds the IACR ePrint version of a paper (via CryptoBib, then dblp, then eprint.iacr.org search), stores its id and can download the PDF.
+- **ePrint versions.** The plugin finds the IACR ePrint version of a paper (via CryptoBib, then dblp, then eprint.iacr.org search), stores its id and can download the PDF. It notices when the paper was revised on ePrint and fetches the new PDF.
+
+- **Preprints catch up with their publication.** A preprint that CryptoBib lists as published becomes the published paper (keeping its ePrint id and PDF), and the ePrint and published versions of a paper are linked as related items.
+
+- **LaTeX with CryptoBib.** Copy a `\cite{…}` for the selected papers with their CryptoBib keys, and export only the papers CryptoBib lacks as a `.bib` file to use next to `crypto.bib`.
 
 - **Import PDFs from a folder.** Imports the PDFs of a folder and its subfolders that are not in the library yet, retrieves their metadata, and can look up their ePrint versions.
 
@@ -63,28 +67,47 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
   - Update Metadata from CryptoBib
   - Find ePrint Version
   - Find and Download ePrint PDF
-  - Convert, Update from CryptoBib and Find ePrint
+  - Check for Revised ePrint Versions: when the ePrint page was revised after the attached PDF, the new PDF is added and the old one keeps its date in its title (or goes to the trash, see the preferences). An identical download is discarded.
+  - Update Preprints to Published Versions: a preprint that CryptoBib lists as published gets the published metadata and type; its ePrint id stays in Extra and its PDF stays attached. If the published version is already in the library, the two are linked instead.
+  - Link ePrint and Published Versions: marks the two versions of a paper as related items (by shared ePrint id, or by title and authors).
+  - Do All of the Above (Except Downloads): convert, update preprints, update from CryptoBib, find the ePrint version, link versions.
+  - Copy as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib…
   - Open ePrint Page
 - **Tools → Update CryptoBib Database**: fetches the latest export.
+- Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
 - **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted and updated from CryptoBib automatically. ePrint lookup and download on save can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
 CryptoBib (~40 MB) is downloaded on first use into `<Zotero data dir>/iacr-tools/`. It is refreshed after 30 days, in the background.
+
+## LaTeX with CryptoBib
+
+If you cite from CryptoBib's `crypto.bib`, **Copy LaTeX Citation** puts `\cite{EC:Bernstein08,…}` on the clipboard: papers CryptoBib has are cited by their CryptoBib key, the others by the key of your BibTeX export (Better BibTeX's pinned key when it is installed, else the item's citation key). **Export BibTeX of Papers Not in CryptoBib…** (also on collections) writes just those other papers to a file, e.g. `my-paper-not-in-cryptobib.bib`, so that
+
+```latex
+\bibliography{abbrev0,crypto,my-paper-not-in-cryptobib}
+```
+
+never defines a paper twice.
 
 ## Preferences (Settings → IACR Tools)
 
 | Setting | Default |
 |---|---|
 | Automatic conversion / CryptoBib update / ePrint lookup / PDF download for new items | on / on / off / off |
+| New items: turn published preprints into the published paper / link ePrint and published versions | off / on |
 | Overwrite existing fields, replace authors and editors | on, on |
 | Venue name style (CryptoBib `abbrev0` … `abbrev3`) | full (`abbrev0`) |
 | CryptoBib refresh interval, download location | 30 days, GitHub `cryptobib/export` |
 | Use dblp and eprint.iacr.org when CryptoBib has no ePrint entry | on |
 | Extra-field key for the ePrint id | `IACR ePrint` |
+| A revised ePrint PDF replaces the old one (otherwise both are kept) | off |
+| Papers fetched at the same time (1–8) | 4 |
+| Progress of imports and commands in a window of their own | on |
 | Folder import: collections for folders, link instead of copy, add PDF to existing item | on, off, on |
 | Folder import: look up ePrint versions / download ePrint PDFs | on / off |
 | List import: download the ePrint PDF of each paper | on |
 
-The paste box, the ePrint column and the menus are the only UI the plugin adds.
+The paste box, the progress window, the ePrint column and the menus are the only UI the plugin adds.
 
 ## Development
 

@@ -64,6 +64,18 @@ export function eprintPaperFromPage(id, doc) {
 	};
 }
 
+/**
+ * When the paper was last revised (its article:modified_time), as an ISO
+ * string; null if the page does not say.
+ * @param {Document | { querySelectorAll: (selector: string) => Iterable<any> }} doc
+ * @returns {string | null}
+ */
+export function eprintRevisionTime(doc) {
+	const meta = metaTagValues(doc);
+	const value = EPRINT.metaTags.modified.map((name) => meta.get(name)?.[0]).find(Boolean);
+	return value && !Number.isNaN(Date.parse(value)) ? value : null;
+}
+
 /** "2024-08-03T14:51:25+00:00" → "2024-08-03"; a bare year stays a year. */
 function normalizeDate(value) {
 	if (!value) return undefined;

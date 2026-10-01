@@ -10,6 +10,8 @@
 		<checkbox preference="__PREF_BRANCH__autoSyncCryptoBib" data-l10n-id="__L10N_PREFIX__-pref-auto-sync"/>
 		<checkbox preference="__PREF_BRANCH__autoFindEprint" data-l10n-id="__L10N_PREFIX__-pref-auto-find"/>
 		<checkbox preference="__PREF_BRANCH__autoDownloadEprint" data-l10n-id="__L10N_PREFIX__-pref-auto-download"/>
+		<checkbox preference="__PREF_BRANCH__autoUpgradePreprints" data-l10n-id="__L10N_PREFIX__-pref-auto-upgrade"/>
+		<checkbox preference="__PREF_BRANCH__autoLinkVersions" data-l10n-id="__L10N_PREFIX__-pref-auto-link"/>
 	</groupbox>
 
 	<groupbox>
@@ -48,6 +50,16 @@
 			<html:input type="text" preference="__PREF_BRANCH__eprintExtraKey"/>
 		</hbox>
 		<description data-l10n-id="__L10N_PREFIX__-pref-extra-key-description"/>
+		<checkbox preference="__PREF_BRANCH__replaceRevisedEprint" data-l10n-id="__L10N_PREFIX__-pref-replace-revised"/>
+	</groupbox>
+
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-general-heading"/></label>
+		<hbox align="center">
+			<label data-l10n-id="__L10N_PREFIX__-pref-concurrency"/>
+			<html:input type="number" min="1" max="8" size="3" preference="__PREF_BRANCH__concurrency"/>
+		</hbox>
+		<checkbox preference="__PREF_BRANCH__progressWindow" data-l10n-id="__L10N_PREFIX__-pref-progress-window"/>
 	</groupbox>
 
 	<groupbox>

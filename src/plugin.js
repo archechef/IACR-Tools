@@ -1,7 +1,7 @@
 /**
  * The plugin: wires the services together and connects them to Zotero's UI.
  */
-import { ASSETS, chromeURL, LIST, NETWORK, PLUGIN } from "./config.js";
+import { ASSETS, chromeURL, LATEX, LIST, NETWORK, PLUGIN, PREFS } from "./config.js";
 import { eprintPageURL } from "./core/eprint.js";
 import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
@@ -13,6 +13,9 @@ import { itemsAsList } from "./zotero/list-export.js";
 import { parseList } from "./core/list.js";
 import { cryptoBibSource, dblpSource, EprintFinder, iacrSearchSource } from "./zotero/eprint-sources.js";
 import { ItemWrapper } from "./zotero/item.js";
+import { LatexSupport } from "./zotero/latex.js";
+import { LibraryIndex } from "./zotero/library-index.js";
+import { createVersionActions } from "./zotero/versions.js";
 import { Pipeline } from "./zotero/pipeline.js";
 import { createGeckoFileStore, createZoteroHttp } from "./zotero/platform.js";
 import { Prefs } from "./zotero/prefs.js";
@@ -32,7 +35,10 @@ export const COMMANDS = Object.freeze([
 	{ id: "sync-cryptobib", actions: ["sync"] },
 	{ id: "find-eprint", actions: ["findEprint"] },
 	{ id: "download-eprint", actions: ["downloadEprint"] },
-	{ id: "process-all", actions: ["convert", "sync", "findEprint"] },
+	{ id: "check-eprint-revisions", actions: ["checkEprintRevision"] },
+	{ id: "upgrade-preprints", actions: ["upgradePreprint"] },
+	{ id: "link-versions", actions: ["linkVersions"] },
+	{ id: "process-all", actions: ["convert", "upgradePreprint", "sync", "findEprint", "linkVersions"] },
 ]);
 
 /**
@@ -41,9 +47,11 @@ export const COMMANDS = Object.freeze([
  */
 const AUTO_ACTIONS = Object.freeze([
 	{ pref: "autoConvertSpringer", action: "convert" },
+	{ pref: "autoUpgradePreprints", action: "upgradePreprint" },
 	{ pref: "autoSyncCryptoBib", action: "sync" },
 	{ pref: "autoFindEprint", action: "findEprint" },
 	{ pref: "autoDownloadEprint", action: "downloadEprint" },
+	{ pref: "autoLinkVersions", action: "linkVersions" },
 ]);
 
 export class IACRTools {
@@ -82,7 +90,9 @@ export class IACRTools {
 			cryptoBibSource(this.store),
 			...(this.prefs.get("useOnlineEprintSearch") ? [dblpSource(http), iacrSearchSource(http)] : []),
 		], this.log);
-		const eprint = new EprintActions({ Zotero, prefs: this.prefs, finder });
+		const eprintKey = () => String(this.prefs.get("eprintExtraKey"));
+		const eprint = new EprintActions({ Zotero, prefs: this.prefs, finder, http, md5: (path) => files.md5(path) });
+		const versions = createVersionActions(this.prefs);
 
 		/** @type {Record<string, import("./zotero/pipeline.js").Action>} */
 		this.actions = {
@@ -90,9 +100,19 @@ export class IACRTools {
 			sync: createCryptoBibSyncAction(this.prefs),
 			findEprint: eprint.find,
 			downloadEprint: eprint.download,
+			checkEprintRevision: eprint.checkRevision,
+			upgradePreprint: versions.upgrade,
+			linkVersions: versions.link,
 		};
 		this.commands = COMMANDS;
-		this.pipeline = new Pipeline({ Zotero, store: this.store, log: this.log });
+		this.pipeline = new Pipeline({
+			Zotero,
+			store: this.store,
+			log: this.log,
+			// The papers only: the version links compare items, never files.
+			loadLibrary: (libraryID) => new LibraryIndex({ Zotero, files, eprintKey: eprintKey() }).load(libraryID, { files: false }),
+		});
+		this.latex = new LatexSupport({ Zotero, store: this.store, eprintKey });
 		this.autoProcessor = new AutoProcessor({
 			Zotero,
 			pipeline: this.pipeline,
@@ -110,7 +130,8 @@ export class IACRTools {
 			store: this.store,
 			pipeline: this.pipeline,
 			finder,
-			eprintKey: () => String(this.prefs.get("eprintExtraKey")),
+			eprintKey,
+			concurrency: () => this.concurrency,
 			suspendAutoProcessing: () => this.autoProcessor.suspend(),
 			log: this.log,
 		});
@@ -119,7 +140,7 @@ export class IACRTools {
 			files,
 			store: this.store,
 			pipeline: this.pipeline,
-			eprintKey: () => String(this.prefs.get("eprintExtraKey")),
+			eprintKey,
 			suspendAutoProcessing: () => this.autoProcessor.suspend(),
 			log: this.log,
 		});
@@ -175,7 +196,7 @@ export class IACRTools {
 			await this.#preloadCryptoBib(progress);
 			await this.pipeline.run(items, command.actions.map((name) => this.actions[name]), {
 				onItemDone: (item, results) => progress.itemDone(item, results),
-				concurrency: NETWORK.concurrency,
+				concurrency: this.concurrency,
 				shouldStop: () => progress.stopRequested,
 			});
 			progress.finish();
@@ -195,6 +216,7 @@ export class IACRTools {
 	 */
 	#openProgress(create) {
 		const { Zotero, l10n } = this;
+		if (!this.prefs.get("progressWindow")) return create(new ToastView(Zotero));
 		try {
 			return create(new DialogView({
 				parentWindow: Zotero.getMainWindow(),
@@ -212,6 +234,13 @@ export class IACRTools {
 			this.log(`The progress window could not be opened: ${e}`);
 			return create(new ToastView(Zotero));
 		}
+	}
+
+	/** Papers looked up or downloaded at the same time (preference, within NETWORK.concurrency). */
+	get concurrency() {
+		const { min, max } = NETWORK.concurrency;
+		const value = Number.parseInt(this.prefs.get("concurrency"), 10);
+		return Number.isFinite(value) ? Math.min(max, Math.max(min, value)) : PREFS.concurrency.default;
 	}
 
 	/** Loads CryptoBib up front so that a first-time download is visible to the user. */
@@ -457,6 +486,80 @@ export class IACRTools {
 			return 0;
 		}
 		return this.copyAsList(this.Zotero.Items.get(collection.getChildItems(true)), collection.name);
+	}
+
+	/**
+	 * Item context menu: copies a \cite command for the selected papers, with
+	 * CryptoBib keys for the papers CryptoBib has.
+	 * @param {any[]} items
+	 */
+	async copyLatexCitation(items) {
+		const { Zotero, l10n } = this;
+		const title = l10n.format("latex-title");
+		try {
+			const cite = await this.latex.citeCommand(items ?? []);
+			if (!cite.keys) {
+				this.dialogs.alert(Zotero.getMainWindow(), title, l10n.format("latex-no-keys"));
+				return null;
+			}
+			Zotero.Utilities.Internal.copyTextToClipboard(cite.text);
+			this.log(`Copied ${cite.text}`);
+			const progress = new BatchProgress(Zotero, l10n, "progress-copy-latex");
+			progress.finish("latex-copied", { count: cite.keys, others: cite.notInCryptoBib, missing: cite.withoutKey });
+			return cite;
+		}
+		catch (e) {
+			this.log(`Copying the LaTeX citation failed: ${e}`);
+			this.dialogs.alert(Zotero.getMainWindow(), title, String(e?.message ?? e));
+			return null;
+		}
+	}
+
+	/**
+	 * Item / collection context menu: saves the papers that CryptoBib lacks as
+	 * a BibTeX file, to be used next to crypto.bib.
+	 * @param {any[]} items
+	 * @param {string} [sourceName] Collection name, for the default file name.
+	 */
+	async exportBibTeXNotInCryptoBib(items, sourceName) {
+		const { Zotero, l10n, prefs } = this;
+		const window = Zotero.getMainWindow();
+		const title = l10n.format("latex-export-title");
+		try {
+			const fileName = LATEX.fileName(sourceName?.replace(/[\\/:*?"<>|]+/g, "-").trim());
+			const header = l10n.format("latex-export-header", {
+				date: new Date().toISOString().slice(0, 10),
+				abbrev: `abbrev${prefs.get("abbrevLevel")}`,
+				file: fileName.replace(/\.bib$/, ""),
+			});
+			const result = await this.latex.bibliographyNotInCryptoBib(items ?? [], { header });
+			if (!result.exported) {
+				this.dialogs.alert(window, title, l10n.format("latex-export-nothing", { count: result.inCryptoBib }));
+				return null;
+			}
+			const path = await this.dialogs.pickSaveFile(window, title, fileName, LATEX.fileFilter);
+			if (!path) return null;
+			await this.files.writeText(path, result.text);
+			this.log(`Exported ${result.exported} papers to ${path}`);
+			new BatchProgress(Zotero, l10n, "progress-export-bibtex")
+				.finish("latex-exported", { count: result.exported, inCryptoBib: result.inCryptoBib });
+			return path;
+		}
+		catch (e) {
+			this.log(`The BibTeX export failed: ${e}`);
+			this.dialogs.alert(window, title, String(e?.message ?? e));
+			return null;
+		}
+	}
+
+	/** The same, for every paper in a collection. */
+	exportCollectionBibTeX(context) {
+		const { collection } = resolveImportTarget(this.Zotero, context);
+		if (!collection) {
+			this.dialogs.alert(this.Zotero.getMainWindow(), this.l10n.format("latex-export-title"), this.l10n.format("copy-no-collection"));
+			return null;
+		}
+		return this.exportBibTeXNotInCryptoBib(this.Zotero.Items.get(collection.getChildItems(true)), collection.name);
 	}
 
 	/** The clipboard as text, if it holds any. */

@@ -36,10 +36,18 @@ export class ItemContext {
 	/**
 	 * @param {ItemWrapper} item
 	 * @param {import("./cryptobib-store.js").CryptoBibStore} store
+	 * @param {(libraryID: number) => Promise<import("./library-index.js").LibraryIndex>} [library]
+	 *   The library's papers, loaded once per pipeline run.
 	 */
-	constructor(item, store) {
+	constructor(item, store, library = () => Promise.reject(new Error("No library index in this context"))) {
 		this.item = item;
 		this.store = store;
+		this.libraryOf = library;
+	}
+
+	/** The papers of this item's library (shared by all items of the run). */
+	library() {
+		return this.libraryOf(this.item.item.libraryID);
 	}
 
 	/** Memoizes an async computation for the lifetime of this context. */
@@ -63,11 +71,14 @@ export class Pipeline {
 	 * @param {any} deps.Zotero
 	 * @param {import("./cryptobib-store.js").CryptoBibStore} deps.store
 	 * @param {(msg: string) => void} deps.log
+	 * @param {(libraryID: number) => Promise<import("./library-index.js").LibraryIndex>} [deps.loadLibrary]
+	 *   Loads a library's papers, for actions that compare an item with the rest of the library.
 	 */
-	constructor({ Zotero, store, log }) {
+	constructor({ Zotero, store, log, loadLibrary }) {
 		this.Zotero = Zotero;
 		this.store = store;
 		this.log = log;
+		this.loadLibrary = loadLibrary;
 	}
 
 	/** Regular items in editable libraries. */
@@ -87,8 +98,15 @@ export class Pipeline {
 	 */
 	async run(items, actions, { onItemDone = () => {}, concurrency = 1, shouldStop } = {}) {
 		const unique = [...new Set(this.eligible(items))];
+		/** @type {Map<number, Promise<import("./library-index.js").LibraryIndex>>} */
+		const libraries = new Map();
+		const library = (libraryID) => {
+			if (!this.loadLibrary) return Promise.reject(new Error("No library index available"));
+			if (!libraries.has(libraryID)) libraries.set(libraryID, this.loadLibrary(libraryID));
+			return libraries.get(libraryID);
+		};
 		const summary = await mapConcurrent(unique, concurrency, async (item) => {
-			const context = new ItemContext(new ItemWrapper(item, this.Zotero), this.store);
+			const context = new ItemContext(new ItemWrapper(item, this.Zotero), this.store, library);
 			const results = [];
 			for (const action of actions) {
 				results.push(await this.#runOne(action, context));

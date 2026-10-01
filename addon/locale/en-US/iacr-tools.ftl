@@ -10,12 +10,22 @@ iacr-tools-menu-find-eprint =
     .label = Find ePrint Version
 iacr-tools-menu-download-eprint =
     .label = Find and Download ePrint PDF
+iacr-tools-menu-check-eprint-revisions =
+    .label = Check for Revised ePrint Versions
+iacr-tools-menu-upgrade-preprints =
+    .label = Update Preprints to Published Versions
+iacr-tools-menu-link-versions =
+    .label = Link ePrint and Published Versions
 iacr-tools-menu-process-all =
-    .label = Convert, Update from CryptoBib and Find ePrint
+    .label = Do All of the Above (Except Downloads)
 iacr-tools-menu-open-eprint =
     .label = Open ePrint Page
 iacr-tools-menu-copy-list =
     .label = Copy as List
+iacr-tools-menu-copy-latex =
+    .label = Copy LaTeX Citation
+iacr-tools-menu-export-bibtex =
+    .label = Export BibTeX of Papers Not in CryptoBib…
 
 ## File menu and collection context menu
 
@@ -25,6 +35,8 @@ iacr-tools-menu-add-list =
     .label = Add Papers from a List…
 iacr-tools-menu-copy-collection-list =
     .label = Copy Papers as List
+iacr-tools-menu-export-collection-bibtex =
+    .label = Export BibTeX of Papers Not in CryptoBib…
 
 ## Tools menu
 
@@ -37,6 +49,9 @@ iacr-tools-progress-convert-springer = Converting Springer chapters
 iacr-tools-progress-sync-cryptobib = Updating metadata from CryptoBib
 iacr-tools-progress-find-eprint = Finding ePrint versions
 iacr-tools-progress-download-eprint = Downloading ePrint PDFs
+iacr-tools-progress-check-eprint-revisions = Checking for revised ePrint versions
+iacr-tools-progress-upgrade-preprints = Updating preprints to published versions
+iacr-tools-progress-link-versions = Linking ePrint and published versions
 iacr-tools-progress-process-all = Processing items
 iacr-tools-progress-update-cryptobib = Updating CryptoBib
 iacr-tools-progress-summary = { $changed } updated, { $unchanged } unchanged, { $skipped } skipped, { $failed } failed
@@ -144,6 +159,39 @@ iacr-tools-copy-summary = { $count ->
        *[other] { $count } papers copied to the clipboard.
     } Paste it wherever you need it; “Add Papers from a List…” reads it back.
 
+## LaTeX
+
+iacr-tools-latex-title = Copy LaTeX Citation
+iacr-tools-latex-no-keys = None of the selected papers has a citation key.
+iacr-tools-progress-copy-latex = Copying a LaTeX citation
+iacr-tools-latex-copied = { $count ->
+        [one] A \cite command with one key was copied to the clipboard.
+       *[other] A \cite command with { $count } keys was copied to the clipboard.
+    }{ $others ->
+        [0] {""}
+        [one] {" "}One paper is not in CryptoBib; export it with “Export BibTeX of Papers Not in CryptoBib…”.
+       *[other] {" "}{ $others } papers are not in CryptoBib; export them with “Export BibTeX of Papers Not in CryptoBib…”.
+    }{ $missing ->
+        [0] {""}
+       *[other] {" "}{ $missing } without a key were left out.
+    }
+iacr-tools-latex-export-title = Export BibTeX of Papers Not in CryptoBib
+iacr-tools-latex-export-header = Papers that CryptoBib does not have, exported by IACR Tools on { $date }.
+    Use this file next to CryptoBib, e.g. \bibliography{"{"}{ $abbrev },crypto,{ $file }{"}"}
+iacr-tools-latex-export-nothing = { $count ->
+        [0] The selection holds no papers.
+        [one] CryptoBib has the selected paper; crypto.bib covers it.
+       *[other] CryptoBib has all { $count } papers; crypto.bib covers them.
+    }
+iacr-tools-progress-export-bibtex = Exporting BibTeX
+iacr-tools-latex-exported = { $count ->
+        [one] One paper was exported
+       *[other] { $count } papers were exported
+    }{ $inCryptoBib ->
+        [0] .
+       *[other] ; { $inCryptoBib } others are in CryptoBib.
+    }
+
 ## Item tree
 
 iacr-tools-column-eprint = ePrint
@@ -160,6 +208,10 @@ iacr-tools-pref-auto-find =
     .label = Look up the ePrint version
 iacr-tools-pref-auto-download =
     .label = Download the ePrint PDF
+iacr-tools-pref-auto-upgrade =
+    .label = Turn preprints that CryptoBib lists as published into the published paper
+iacr-tools-pref-auto-link =
+    .label = Link the ePrint and the published version as related items
 
 iacr-tools-pref-cryptobib-heading = CryptoBib
 iacr-tools-pref-overwrite =
@@ -185,6 +237,13 @@ iacr-tools-pref-online-search =
     .label = Search dblp and eprint.iacr.org when CryptoBib has no match
 iacr-tools-pref-extra-key = Extra field key:
 iacr-tools-pref-extra-key-description = The ePrint id is stored in the Extra field as “<key>: YYYY/NNN” and shown in the “ePrint” column.
+iacr-tools-pref-replace-revised =
+    .label = When a revised ePrint PDF is downloaded, move the old one to the trash (otherwise it is kept with its date)
+
+iacr-tools-pref-general-heading = Running Commands
+iacr-tools-pref-concurrency = Papers fetched at the same time (1–8):
+iacr-tools-pref-progress-window =
+    .label = Show the progress of imports and commands in a window of their own
 
 iacr-tools-pref-import-heading = Import PDFs from Folder
 iacr-tools-pref-import-description = File → Import PDFs from Folder… (or right-click a collection) imports the PDFs of a folder and its subfolders that are not in the library yet. New items are converted and updated from CryptoBib according to the settings above.

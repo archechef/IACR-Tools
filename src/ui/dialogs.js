@@ -6,6 +6,7 @@
  * @typedef {object} Dialogs
  * @property {(window: any, title: string) => Promise<string | null>} pickFolder
  * @property {(window: any, title: string, filter?: string) => Promise<string | null>} pickFile
+ * @property {(window: any, title: string, defaultName: string, filter?: string) => Promise<string | null>} pickSaveFile
  * @property {(window: any, options: { title: string, text: string, accept: string, secondary?: string, checkLabel?: string, checked?: boolean }) => { confirmed: boolean, secondary: boolean, checked: boolean }} confirm
  * @property {(window: any, url: string, io: any) => any} pasteList
  * @property {(window: any, title: string, text: string) => void} alert
@@ -32,6 +33,18 @@ export function createDialogs({ ChromeUtils, Services }) {
 			if (filter) picker.appendFilter(filter, filter);
 			picker.appendFilters(picker.filterAll);
 			return (await picker.show()) === picker.returnOK ? picker.file : null;
+		},
+		async pickSaveFile(window, title, defaultName, filter) {
+			const { FilePicker } = ChromeUtils.importESModule("chrome://zotero/content/modules/filePicker.mjs");
+			const picker = new FilePicker();
+			picker.init(window, title, picker.modeSave);
+			picker.defaultString = defaultName;
+			if (filter) {
+				picker.appendFilter(filter, filter);
+				picker.defaultExtension = filter.replace(/^\*\./, "");
+			}
+			const answer = await picker.show();
+			return answer === picker.returnOK || answer === picker.returnReplace ? picker.file : null;
 		},
 		confirm(window, { title, text, accept, secondary, checkLabel, checked = false }) {
 			const { prompt } = Services;

@@ -1,7 +1,9 @@
 /**
- * What a library already contains, for the folder import: its PDF files (by
- * path, MD5 and size) and its papers (by DOI, ePrint id, and title + authors).
+ * What a library already contains, for the imports and the version links: its
+ * PDF files (by path, MD5 and size) and its papers (by DOI, ePrint id, and
+ * title + authors).
  */
+import { EPRINT } from "../config.js";
 import { bestMatch } from "../core/matching.js";
 import { normalizeDOI } from "../core/text.js";
 import { storedEprintId } from "./eprint.js";
@@ -128,6 +130,27 @@ export class LibraryIndex {
 		if (byEprint && isOther(byEprint)) return byEprint.item;
 		const candidates = this.#papers.filter((entry) => isOther(entry) && !(doi && entry.doi && entry.doi !== doi));
 		return bestMatch(reference, candidates)?.candidate.item ?? null;
+	}
+
+	/**
+	 * The other version of a paper in the library: the published item for an
+	 * ePrint preprint, or the preprint for a published item. They share the
+	 * ePrint id, or match by title and authors (years and DOIs differ between
+	 * versions, so neither is compared).
+	 * @param {any} item Zotero.Item
+	 * @returns {any | null}
+	 */
+	findOtherVersion(item) {
+		const wrapper = new ItemWrapper(item, this.Zotero);
+		const isPreprint = (other) => this.Zotero.ItemTypes.getName(other.itemTypeID) === EPRINT.itemType;
+		const wantPreprint = !isPreprint(item);
+		const others = this.#papers.filter((entry) => entry.item.id !== item.id && !entry.item.deleted
+			&& isPreprint(entry.item) === wantPreprint);
+		const eprintId = storedEprintId(wrapper, this.eprintKey);
+		const sameId = eprintId && others.find((entry) => entry.eprintId === eprintId);
+		if (sameId) return sameId.item;
+		const query = { ...wrapper.reference, doi: undefined };
+		return bestMatch(query, others, { yearTolerance: null })?.candidate.item ?? null;
 	}
 
 	/** Whether the item has a PDF attachment. */

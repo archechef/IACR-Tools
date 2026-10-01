@@ -57,6 +57,10 @@ export const PREFS = Object.freeze({
 	autoSyncCryptoBib: { key: "autoSyncCryptoBib", default: true },
 	autoFindEprint: { key: "autoFindEprint", default: false },
 	autoDownloadEprint: { key: "autoDownloadEprint", default: false },
+	/** New preprints that CryptoBib lists as published become the published paper. */
+	autoUpgradePreprints: { key: "autoUpgradePreprints", default: false },
+	/** New items are linked (as related items) with their ePrint or published version in the library. */
+	autoLinkVersions: { key: "autoLinkVersions", default: true },
 	overwriteFields: { key: "overwriteFields", default: true },
 	replaceCreators: { key: "replaceCreators", default: true },
 	/** Which CryptoBib abbreviation level to use: 0 (full names) … 3 (shortest). */
@@ -80,6 +84,12 @@ export const PREFS = Object.freeze({
 	folderImportAttachToExisting: { key: "folderImport.attachToExisting", default: true },
 	/** List import: download the ePrint PDF of every paper added from a list. */
 	listDownloadPdf: { key: "listImport.downloadPdf", default: true },
+	/** A revised ePrint PDF replaces the old one (moved to the trash) instead of being added next to it. */
+	replaceRevisedEprint: { key: "replaceRevisedEprint", default: false },
+	/** Papers looked up or downloaded at the same time (list import, menu commands). */
+	concurrency: { key: "concurrency", default: 4 },
+	/** Long runs report in a window of their own; off: Zotero's small pop-up. */
+	progressWindow: { key: "progressWindow", default: true },
 });
 
 const EPRINT_ITEM_TYPE = "preprint";
@@ -178,6 +188,14 @@ export const EPRINT = Object.freeze({
 		link: "a.paperlink",
 	},
 	attachmentTitle: "IACR ePrint Full Text PDF",
+	/** Title of an older ePrint PDF kept next to a revised one. */
+	olderAttachmentTitle: (date) => `IACR ePrint Full Text PDF (version of ${date})`,
+	olderAttachmentTitlePattern: /^IACR ePrint Full Text PDF \(version of .*\)$/,
+	/**
+	 * Extra-field key recording the ePrint revision whose PDF the item has
+	 * (the page's article:modified_time), next to the id ("<id key> version").
+	 */
+	versionKey: (eprintKey) => `${eprintKey} version`,
 	pdfContentType: "application/pdf",
 	/** Paper numbers are zero-padded to at least this many digits. */
 	numberPadding: 3,
@@ -189,6 +207,8 @@ export const EPRINT = Object.freeze({
 		title: ["citation_title", "og:title"],
 		author: ["citation_author"],
 		date: ["article:published_time", "citation_publication_date", "citation_date"],
+		/** When the paper was last revised. */
+		modified: ["article:modified_time", "article:published_time"],
 		abstract: ["og:description", "citation_abstract"],
 		repository: ["citation_journal_title", "og:site_name"],
 		keywords: ["article:tag"],
@@ -210,8 +230,8 @@ export const NETWORK = Object.freeze({
 	downloadTimeoutMs: 5 * 60_000,
 	/** Give up retrying throttled (429/5xx) lookups after this long. */
 	errorDelayMaxMs: 15_000,
-	/** Papers looked up or downloaded at the same time (list import, menu commands); kept low to be polite to eprint.iacr.org and dblp. */
-	concurrency: 4,
+	/** Bounds of the "concurrency" preference; kept low to be polite to eprint.iacr.org and dblp. */
+	concurrency: { min: 1, max: 8 },
 });
 
 export const AUTO = Object.freeze({
@@ -260,6 +280,19 @@ export const LIST = Object.freeze({
 	maxCommentLength: 100,
 	/** File types offered by the file picker. */
 	fileFilter: "*.txt; *.md; *.csv; *.bib; *.json",
+});
+
+/** LaTeX: \cite keys and a BibTeX file for the papers that crypto.bib lacks. */
+export const LATEX = Object.freeze({
+	/** Zotero's export translators: Better BibTeX when installed (its keys are pinned), else Zotero's own. */
+	translators: Object.freeze({
+		betterBibTeX: "ca65189f-8815-4afe-8c8b-8c7c15f0edca",
+		bibTeX: "9cb70025-a888-4a29-a210-93ec52da40d4",
+	}),
+	citeCommand: "cite",
+	/** Default name of the exported file, e.g. "my-paper-not-in-cryptobib.bib". */
+	fileName: (source) => `${source || "papers"}-not-in-cryptobib.bib`,
+	fileFilter: "*.bib",
 });
 
 export const PROGRESS = Object.freeze({

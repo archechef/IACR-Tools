@@ -62,6 +62,36 @@ export class ItemWrapper {
 		return name;
 	}
 
+	/**
+	 * Empties a field (resolved like {@link getField}).
+	 * @returns {boolean} whether the field had a value
+	 */
+	clearField(name) {
+		const fieldName = this.#fieldName(name);
+		if (!fieldName || !this.item.getField(fieldName)) return false;
+		this.item.setField(fieldName, "");
+		this.#changed = true;
+		return true;
+	}
+
+	/** Whether the two items are linked as related items. */
+	isRelatedTo(other) {
+		return this.item.relatedItems.includes(other.key);
+	}
+
+	/**
+	 * Links the two items as related items (in both directions, as Zotero's
+	 * "Related" pane does) and saves the other one; this one is saved by {@link save}.
+	 * @returns {Promise<boolean>} whether a link was added
+	 */
+	async relateTo(other) {
+		if (this.isRelatedTo(other)) return false;
+		this.item.addRelatedItem(other);
+		this.#changed = true;
+		if (other.addRelatedItem(this.item)) await other.saveTx();
+		return true;
+	}
+
 	getExtra(key) {
 		return getExtraField(this.item.getField("extra"), key);
 	}

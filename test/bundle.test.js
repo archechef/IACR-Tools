@@ -289,6 +289,39 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.match(copied, /^# iacr-tools-copy-header/, "the list carries a header comment");
 	assert.match(copied, /^2008\/045\s+# Threshold RSA for Dynamic and Ad-Hoc Groups$/m);
 
+	// The new commands are in the IACR submenu.
+	for (const id of ["check-eprint-revisions", "upgrade-preprints", "link-versions", "copy-latex", "export-bibtex"]) {
+		assert.ok(submenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `menu entry ${id}`);
+	}
+
+	// LaTeX: a \cite with the CryptoBib key, and a .bib of the papers CryptoBib lacks.
+	const latex = submenu.find((m) => m.l10nID?.endsWith("menu-copy-latex"));
+	await latex.onCommand(null, { items: matching });
+	assert.equal(env.Zotero.copied.at(-1), "\\cite{EC:GHKR08}");
+	const musings = env.Zotero.addItem("journalArticle", { fields: { title: "Musings", citationKey: "lovelace1843" } });
+	const bibPath = join(dataDir, "out.bib");
+	const saveAs = [];
+	plugin.dialogs.pickSaveFile = async (window, title, name) => (saveAs.push(name), bibPath);
+	const exportBib = submenu.find((m) => m.l10nID?.endsWith("menu-export-bibtex"));
+	await exportBib.onCommand(null, { items: [...matching, musings] });
+	assert.deepEqual(saveAs, ["papers-not-in-cryptobib.bib"]);
+	const bib = await readFile(bibPath, "utf8");
+	assert.match(bib, /^% iacr-tools-latex-export-header .*"abbrev":"abbrev0"/, "header names the abbreviation file");
+	assert.match(bib, /@journalArticle\{lovelace1843,/);
+	assert.doesNotMatch(bib, /GHKR08|Threshold/, "papers in CryptoBib are left to crypto.bib");
+
+	// Preferences: the number of parallel fetches is kept within bounds; without
+	// the progress window, commands report in Zotero's pop-up.
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}concurrency`, 50);
+	assert.equal(plugin.concurrency, 8);
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}concurrency`, "two");
+	assert.equal(plugin.concurrency, 4);
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}progressWindow`, false);
+	const windows = env.registered.dialogs.length;
+	await command("link-versions").onCommand(null, { items: matching });
+	assert.equal(env.registered.dialogs.length, windows, "no window opened");
+	assert.equal(env.registered.progress.at(-1).headline, `${PLUGIN.l10nPrefix}-progress-link-versions`);
+
 	// Without the paste box (older Zotero, or a dialog that fails to load) the
 	// command falls back to the clipboard and a plain confirmation.
 	plugin.dialogs.pasteList = () => {
