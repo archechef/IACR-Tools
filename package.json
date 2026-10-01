@@ -1,0 +1,27 @@
+{
+  "name": "zotero-iacr-tools",
+  "version": "1.3.0",
+  "description": "Zotero plugin integrating the IACR ecosystem: Springer conference papers, CryptoBib metadata and ePrint versions",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/archechef/IACR-Tools.git"
+  },
+  "homepage": "https://github.com/archechef/IACR-Tools#readme",
+  "bugs": {
+    "url": "https://github.com/archechef/IACR-Tools/issues"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "build": "node scripts/build.mjs",
+    "check": "tsc -p jsconfig.json"
+  },
+  "license": "MIT",
+  "type": "module",
+  "devDependencies": {
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

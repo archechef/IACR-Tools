@@ -1,0 +1,68 @@
+<linkset>
+	<html:link rel="localization" href="__FTL__"/>
+</linkset>
+
+<vbox id="__L10N_PREFIX__-prefs">
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-auto-heading"/></label>
+		<description data-l10n-id="__L10N_PREFIX__-pref-auto-description"/>
+		<checkbox preference="__PREF_BRANCH__autoConvertSpringer" data-l10n-id="__L10N_PREFIX__-pref-auto-convert"/>
+		<checkbox preference="__PREF_BRANCH__autoSyncCryptoBib" data-l10n-id="__L10N_PREFIX__-pref-auto-sync"/>
+		<checkbox preference="__PREF_BRANCH__autoFindEprint" data-l10n-id="__L10N_PREFIX__-pref-auto-find"/>
+		<checkbox preference="__PREF_BRANCH__autoDownloadEprint" data-l10n-id="__L10N_PREFIX__-pref-auto-download"/>
+	</groupbox>
+
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-cryptobib-heading"/></label>
+		<checkbox preference="__PREF_BRANCH__overwriteFields" data-l10n-id="__L10N_PREFIX__-pref-overwrite"/>
+		<checkbox preference="__PREF_BRANCH__replaceCreators" data-l10n-id="__L10N_PREFIX__-pref-replace-creators"/>
+		<hbox align="center">
+			<label data-l10n-id="__L10N_PREFIX__-pref-abbrev"/>
+			<menulist preference="__PREF_BRANCH__abbrevLevel" native="true">
+				<menupopup>
+					<menuitem value="0" data-l10n-id="__L10N_PREFIX__-pref-abbrev-0"/>
+					<menuitem value="1" data-l10n-id="__L10N_PREFIX__-pref-abbrev-1"/>
+					<menuitem value="2" data-l10n-id="__L10N_PREFIX__-pref-abbrev-2"/>
+					<menuitem value="3" data-l10n-id="__L10N_PREFIX__-pref-abbrev-3"/>
+				</menupopup>
+			</menulist>
+		</hbox>
+		<hbox align="center">
+			<label data-l10n-id="__L10N_PREFIX__-pref-max-age"/>
+			<html:input type="number" min="0" size="4" preference="__PREF_BRANCH__cryptobibMaxAgeDays"/>
+		</hbox>
+		<hbox align="center">
+			<label data-l10n-id="__L10N_PREFIX__-pref-base-url"/>
+			<html:input type="url" flex="1" preference="__PREF_BRANCH__cryptobibBaseURL"/>
+		</hbox>
+		<hbox>
+			<button id="__L10N_PREFIX__-update-cryptobib" data-l10n-id="__L10N_PREFIX__-pref-update-now"/>
+		</hbox>
+	</groupbox>
+
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-eprint-heading"/></label>
+		<checkbox preference="__PREF_BRANCH__useOnlineEprintSearch" data-l10n-id="__L10N_PREFIX__-pref-online-search"/>
+		<hbox align="center">
+			<label data-l10n-id="__L10N_PREFIX__-pref-extra-key"/>
+			<html:input type="text" preference="__PREF_BRANCH__eprintExtraKey"/>
+		</hbox>
+		<description data-l10n-id="__L10N_PREFIX__-pref-extra-key-description"/>
+	</groupbox>
+
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-import-heading"/></label>
+		<description data-l10n-id="__L10N_PREFIX__-pref-import-description"/>
+		<checkbox preference="__PREF_BRANCH__folderImport.subcollections" data-l10n-id="__L10N_PREFIX__-pref-import-subcollections"/>
+		<checkbox preference="__PREF_BRANCH__folderImport.linkFiles" data-l10n-id="__L10N_PREFIX__-pref-import-link"/>
+		<checkbox preference="__PREF_BRANCH__folderImport.attachToExisting" data-l10n-id="__L10N_PREFIX__-pref-import-attach"/>
+		<checkbox preference="__PREF_BRANCH__folderImport.findEprint" data-l10n-id="__L10N_PREFIX__-pref-import-find-eprint"/>
+		<checkbox preference="__PREF_BRANCH__folderImport.downloadEprint" data-l10n-id="__L10N_PREFIX__-pref-import-download-eprint"/>
+	</groupbox>
+
+	<groupbox>
+		<label><html:h2 data-l10n-id="__L10N_PREFIX__-pref-list-heading"/></label>
+		<description data-l10n-id="__L10N_PREFIX__-pref-list-description"/>
+		<checkbox preference="__PREF_BRANCH__listImport.downloadPdf" data-l10n-id="__L10N_PREFIX__-pref-list-download"/>
+	</groupbox>
+</vbox>

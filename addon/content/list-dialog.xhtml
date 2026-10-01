@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!--
+	The paste box of "Add Papers from a List". Plain HTML, so that it works
+	without Zotero's XUL custom elements; all labels come from the caller
+	through window.arguments[0].
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta charset="utf-8"/>
+	<title></title>
+	<link rel="stylesheet" href="list-dialog.css"/>
+</head>
+<body>
+	<p id="description"></p>
+	<textarea id="text" spellcheck="false"></textarea>
+	<label id="download-row"><input type="checkbox" id="download"/><span id="download-label"></span></label>
+	<div id="buttons">
+		<button id="file" type="button"></button>
+		<span class="spacer"></span>
+		<button id="cancel" type="button"></button>
+		<button id="accept" type="button" class="default"></button>
+	</div>
+	<script src="list-dialog.js"/>
+</body>
+</html>

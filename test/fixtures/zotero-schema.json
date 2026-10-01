@@ -1,0 +1,801 @@
+{
+ "version": 45,
+ "itemTypes": [
+  {
+   "itemType": "book",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "series"
+    },
+    {
+     "field": "seriesNumber"
+    },
+    {
+     "field": "volume"
+    },
+    {
+     "field": "numberOfVolumes"
+    },
+    {
+     "field": "edition"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "originalDate"
+    },
+    {
+     "field": "originalPublisher"
+    },
+    {
+     "field": "originalPlace"
+    },
+    {
+     "field": "format",
+     "baseField": "medium"
+    },
+    {
+     "field": "numPages"
+    },
+    {
+     "field": "ISBN"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "ISSN"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "seriesEditor"
+    }
+   ]
+  },
+  {
+   "itemType": "bookSection",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "bookTitle",
+     "baseField": "publicationTitle"
+    },
+    {
+     "field": "series"
+    },
+    {
+     "field": "seriesNumber"
+    },
+    {
+     "field": "volume"
+    },
+    {
+     "field": "numberOfVolumes"
+    },
+    {
+     "field": "edition"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "originalDate"
+    },
+    {
+     "field": "originalPublisher"
+    },
+    {
+     "field": "originalPlace"
+    },
+    {
+     "field": "format",
+     "baseField": "medium"
+    },
+    {
+     "field": "pages"
+    },
+    {
+     "field": "ISBN"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "ISSN"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "bookAuthor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "seriesEditor"
+    }
+   ]
+  },
+  {
+   "itemType": "conferencePaper",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "proceedingsTitle",
+     "baseField": "publicationTitle"
+    },
+    {
+     "field": "conferenceName"
+    },
+    {
+     "field": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "eventPlace"
+    },
+    {
+     "field": "volume"
+    },
+    {
+     "field": "issue"
+    },
+    {
+     "field": "numberOfVolumes"
+    },
+    {
+     "field": "pages"
+    },
+    {
+     "field": "series"
+    },
+    {
+     "field": "seriesNumber"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "ISBN"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "ISSN"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "seriesEditor"
+    }
+   ]
+  },
+  {
+   "itemType": "document",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "type"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "reviewedAuthor"
+    }
+   ]
+  },
+  {
+   "itemType": "journalArticle",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "publicationTitle"
+    },
+    {
+     "field": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "volume"
+    },
+    {
+     "field": "issue"
+    },
+    {
+     "field": "section"
+    },
+    {
+     "field": "partNumber"
+    },
+    {
+     "field": "partTitle"
+    },
+    {
+     "field": "pages"
+    },
+    {
+     "field": "series"
+    },
+    {
+     "field": "seriesTitle"
+    },
+    {
+     "field": "seriesText"
+    },
+    {
+     "field": "journalAbbreviation"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "PMID"
+    },
+    {
+     "field": "PMCID"
+    },
+    {
+     "field": "ISSN"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "reviewedAuthor"
+    }
+   ]
+  },
+  {
+   "itemType": "manuscript",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "manuscriptType",
+     "baseField": "type"
+    },
+    {
+     "field": "institution",
+     "baseField": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "numPages"
+    },
+    {
+     "field": "number"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "translator"
+    }
+   ]
+  },
+  {
+   "itemType": "preprint",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "genre",
+     "baseField": "type"
+    },
+    {
+     "field": "repository",
+     "baseField": "publisher"
+    },
+    {
+     "field": "archiveID",
+     "baseField": "number"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "series"
+    },
+    {
+     "field": "seriesNumber"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "reviewedAuthor"
+    }
+   ]
+  },
+  {
+   "itemType": "report",
+   "fields": [
+    {
+     "field": "title"
+    },
+    {
+     "field": "abstractNote"
+    },
+    {
+     "field": "reportNumber",
+     "baseField": "number"
+    },
+    {
+     "field": "reportType",
+     "baseField": "type"
+    },
+    {
+     "field": "institution",
+     "baseField": "publisher"
+    },
+    {
+     "field": "place"
+    },
+    {
+     "field": "date"
+    },
+    {
+     "field": "seriesTitle"
+    },
+    {
+     "field": "seriesNumber"
+    },
+    {
+     "field": "pages"
+    },
+    {
+     "field": "DOI"
+    },
+    {
+     "field": "ISBN"
+    },
+    {
+     "field": "citationKey"
+    },
+    {
+     "field": "url"
+    },
+    {
+     "field": "accessDate"
+    },
+    {
+     "field": "ISSN"
+    },
+    {
+     "field": "archive"
+    },
+    {
+     "field": "archiveLocation"
+    },
+    {
+     "field": "shortTitle"
+    },
+    {
+     "field": "language"
+    },
+    {
+     "field": "libraryCatalog"
+    },
+    {
+     "field": "callNumber"
+    },
+    {
+     "field": "rights"
+    },
+    {
+     "field": "extra"
+    }
+   ],
+   "creatorTypes": [
+    {
+     "creatorType": "author",
+     "primary": true
+    },
+    {
+     "creatorType": "editor"
+    },
+    {
+     "creatorType": "contributor"
+    },
+    {
+     "creatorType": "translator"
+    },
+    {
+     "creatorType": "seriesEditor"
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,15 @@
+{
+	"compilerOptions": {
+		"target": "ES2022",
+		"module": "ES2022",
+		"moduleResolution": "bundler",
+		"checkJs": true,
+		"allowJs": true,
+		"noEmit": true,
+		"strict": false,
+		"noUnusedLocals": true,
+		"noUnusedParameters": false,
+		"lib": ["ES2023", "DOM", "DOM.Iterable"]
+	},
+	"include": ["src/**/*.js", "types/*.d.ts"]
+}

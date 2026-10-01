@@ -1,0 +1,18 @@
+{
+	"manifest_version": 2,
+	"name": "__PLUGIN_NAME__",
+	"version": "__VERSION__",
+	"description": "__DESCRIPTION__",
+	"icons": {
+		"48": "__ICON__",
+		"96": "__ICON__"
+	},
+	"applications": {
+		"zotero": {
+			"id": "__PLUGIN_ID__",
+			"update_url": "__UPDATE_URL__",
+			"strict_min_version": "7.999",
+			"strict_max_version": "10.*"
+		}
+	}
+}

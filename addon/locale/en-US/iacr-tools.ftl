@@ -1,0 +1,199 @@
+## Item context menu
+
+iacr-tools-menu-root =
+    .label = IACR
+iacr-tools-menu-convert-springer =
+    .label = Convert Springer Chapters to Conference Papers
+iacr-tools-menu-sync-cryptobib =
+    .label = Update Metadata from CryptoBib
+iacr-tools-menu-find-eprint =
+    .label = Find ePrint Version
+iacr-tools-menu-download-eprint =
+    .label = Find and Download ePrint PDF
+iacr-tools-menu-process-all =
+    .label = Convert, Update from CryptoBib and Find ePrint
+iacr-tools-menu-open-eprint =
+    .label = Open ePrint Page
+iacr-tools-menu-copy-list =
+    .label = Copy as List
+
+## File menu and collection context menu
+
+iacr-tools-menu-import-folder =
+    .label = Import PDFs from Folder…
+iacr-tools-menu-add-list =
+    .label = Add Papers from a List…
+iacr-tools-menu-copy-collection-list =
+    .label = Copy Papers as List
+
+## Tools menu
+
+iacr-tools-menu-update-cryptobib =
+    .label = Update CryptoBib Database
+
+## Progress window
+
+iacr-tools-progress-convert-springer = Converting Springer chapters
+iacr-tools-progress-sync-cryptobib = Updating metadata from CryptoBib
+iacr-tools-progress-find-eprint = Finding ePrint versions
+iacr-tools-progress-download-eprint = Downloading ePrint PDFs
+iacr-tools-progress-process-all = Processing items
+iacr-tools-progress-update-cryptobib = Updating CryptoBib
+iacr-tools-progress-summary = { $changed } updated, { $unchanged } unchanged, { $skipped } skipped, { $failed } failed
+iacr-tools-progress-failed = The operation failed.
+
+iacr-tools-status-changed = updated
+iacr-tools-status-unchanged = unchanged
+iacr-tools-status-skipped = skipped
+iacr-tools-status-failed = failed
+
+iacr-tools-store-downloading = Downloading CryptoBib (about 40 MB)…
+iacr-tools-store-indexing = Indexing CryptoBib…
+iacr-tools-store-ready = CryptoBib is ready.
+iacr-tools-store-failed = CryptoBib is unavailable; only online sources will be used.
+iacr-tools-store-updated = CryptoBib updated: { $count } entries.
+
+## Folder import
+
+iacr-tools-import-title = Import PDFs from Folder
+iacr-tools-import-pick-folder = Choose a folder of PDFs to import
+iacr-tools-import-read-only = The selected library is read-only.
+iacr-tools-import-scanning = Looking for PDFs and comparing them with your library…
+iacr-tools-import-running = Importing { $count ->
+        [one] one PDF
+       *[other] { $count } PDFs
+    }…
+iacr-tools-import-nothing-new = “{ $folder }” and its subfolders contain { $total ->
+        [one] one PDF
+       *[other] { $total } PDFs
+    }, and your library already has { $total ->
+        [one] it.
+       *[other] all of them.
+    }
+iacr-tools-import-confirm = “{ $folder }” and its subfolders contain { $total ->
+        [one] one PDF
+       *[other] { $total } PDFs
+    }. { $exists ->
+        [0] { "" }
+        [one] One is already in your library.
+       *[other] { $exists } are already in your library.
+    } { $repeat ->
+        [0] { "" }
+        [one] One is a copy of another file in the folder.
+       *[other] { $repeat } are copies of other files in the folder.
+    }
+    Import { $new ->
+        [one] the remaining PDF
+       *[other] the remaining { $new } PDFs
+    } into “{ $target }”? Metadata is retrieved for each PDF; papers that turn out to be in your library already are skipped.
+iacr-tools-import-accept = Import
+iacr-tools-import-find-eprint = Look up the IACR ePrint version of each imported paper
+iacr-tools-progress-import-folder = Importing PDFs from folder
+iacr-tools-import-status-imported = imported
+iacr-tools-import-status-attached = PDF added to the existing item
+iacr-tools-import-status-exists = already in library
+iacr-tools-import-status-repeat = copy of another file
+iacr-tools-import-status-unrecognized = imported without metadata
+iacr-tools-import-status-failed = failed
+iacr-tools-import-summary = { $imported } imported, { $attached } added to existing items, { $exists } already in library, { $repeat } copies skipped, { $unrecognized } without metadata, { $failed } failed
+
+## Reading lists
+
+iacr-tools-list-title = Add Papers from a List
+iacr-tools-list-pick-file = Choose a list of papers
+iacr-tools-list-empty = No papers were found in that file. Each line should hold an ePrint id (2024/1234), a DOI, a CryptoBib key or a paper title.
+iacr-tools-list-confirm = { $count ->
+        [one] One paper was
+       *[other] { $count } papers were
+    } found in the list. Add { $count ->
+        [one] it
+       *[other] them
+    } to “{ $target }”? Papers that are already in your library are left alone.
+iacr-tools-list-dialog-description = One paper per line: an ePrint id (2024/1234), a DOI, a CryptoBib key or a title. Text after # is a comment. Papers are added to “{ $target }”; those already in your library are left alone.
+iacr-tools-list-cancel = Cancel
+iacr-tools-list-accept = Add Papers
+iacr-tools-list-choose-file = Use a File Instead…
+iacr-tools-list-download-pdf = Download the ePrint PDF of each paper
+iacr-tools-list-running = Looking up { $count ->
+        [one] one paper
+       *[other] { $count } papers
+    }…
+iacr-tools-progress-add-list = Adding papers from a list
+iacr-tools-list-status-added = added
+iacr-tools-list-status-updated = already in library, updated
+iacr-tools-list-status-exists = already in library
+iacr-tools-list-status-not-found = not found
+iacr-tools-list-status-failed = failed
+iacr-tools-list-summary = { $added } added, { $updated } updated, { $exists } already in library, { $notFound } not found, { $failed } failed
+
+## Copying papers out
+
+iacr-tools-copy-title = Copy as List
+iacr-tools-copy-header = Papers from Zotero: { $source }
+iacr-tools-copy-empty = The selection holds no papers to copy.
+iacr-tools-copy-no-collection = Select a collection first.
+iacr-tools-progress-copy-list = Copying papers as a list
+iacr-tools-copy-summary = { $count ->
+        [one] One paper copied to the clipboard.
+       *[other] { $count } papers copied to the clipboard.
+    } Paste it wherever you need it; “Add Papers from a List…” reads it back.
+
+## Item tree
+
+iacr-tools-column-eprint = ePrint
+
+## Preferences
+
+iacr-tools-pref-auto-heading = New Items
+iacr-tools-pref-auto-description = Applied automatically to items you add (for example with the Zotero Connector).
+iacr-tools-pref-auto-convert =
+    .label = Save Springer conference papers as “Conference Paper”
+iacr-tools-pref-auto-sync =
+    .label = Update metadata from CryptoBib
+iacr-tools-pref-auto-find =
+    .label = Look up the ePrint version
+iacr-tools-pref-auto-download =
+    .label = Download the ePrint PDF
+
+iacr-tools-pref-cryptobib-heading = CryptoBib
+iacr-tools-pref-overwrite =
+    .label = Overwrite existing fields with CryptoBib values
+iacr-tools-pref-replace-creators =
+    .label = Replace authors and editors with CryptoBib’s names
+iacr-tools-pref-abbrev = Venue names:
+iacr-tools-pref-abbrev-0 =
+    .label = Full (abbrev0)
+iacr-tools-pref-abbrev-1 =
+    .label = Abbreviated (abbrev1)
+iacr-tools-pref-abbrev-2 =
+    .label = Short (abbrev2)
+iacr-tools-pref-abbrev-3 =
+    .label = Shortest (abbrev3)
+iacr-tools-pref-max-age = Refresh CryptoBib after (days, 0 = never):
+iacr-tools-pref-base-url = Download location:
+iacr-tools-pref-update-now =
+    .label = Update CryptoBib Now
+
+iacr-tools-pref-eprint-heading = IACR ePrint
+iacr-tools-pref-online-search =
+    .label = Search dblp and eprint.iacr.org when CryptoBib has no match
+iacr-tools-pref-extra-key = Extra field key:
+iacr-tools-pref-extra-key-description = The ePrint id is stored in the Extra field as “<key>: YYYY/NNN” and shown in the “ePrint” column.
+
+iacr-tools-pref-import-heading = Import PDFs from Folder
+iacr-tools-pref-import-description = File → Import PDFs from Folder… (or right-click a collection) imports the PDFs of a folder and its subfolders that are not in the library yet. New items are converted and updated from CryptoBib according to the settings above.
+iacr-tools-pref-import-subcollections =
+    .label = Create a collection for the folder and each subfolder
+iacr-tools-pref-import-link =
+    .label = Link to the files instead of copying them into Zotero (My Library only)
+iacr-tools-pref-import-attach =
+    .label = Add the PDF to the existing item when the paper is in the library without a PDF
+iacr-tools-pref-import-find-eprint =
+    .label = Look up the ePrint version of each imported paper
+iacr-tools-pref-import-download-eprint =
+    .label = Also download the ePrint PDF
+
+iacr-tools-pref-list-heading = Add Papers from a List
+iacr-tools-pref-list-description = File → Add Papers from a List… reads a list of papers from the clipboard or a file: one ePrint id (2024/1234), DOI, CryptoBib key (EC:Bernstein08) or paper title per line, or a BibTeX bibliography. Lines starting with # are ignored.
+iacr-tools-pref-list-download =
+    .label = Download the ePrint PDF of each paper added from a list
