@@ -131,8 +131,8 @@ Names, ids and paths are defined once in `src/config.js`. The build fills them i
 Bump `version` in `package.json`, commit, then tag and push:
 
 ```sh
-git tag v1.3.2
-git push origin v1.3.2
+git tag v1.3.3
+git push origin v1.3.3
 ```
 
 The release workflow builds the plugin and attaches the `.xpi` and `updates.json` to a GitHub release. Installed copies find the new version through `updates.json`.
