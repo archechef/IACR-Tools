@@ -1,0 +1,97 @@
+:root {
+	color-scheme: light dark;
+	--muted: GrayText;
+	--error: light-dark(#b3261e, #ff8a80);
+	--done: light-dark(#1e7d32, #7bd88f);
+	--line: light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.14));
+}
+
+html, body { height: 100%; }
+
+body {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin: 0;
+	padding: 14px 16px 12px;
+	box-sizing: border-box;
+	font: message-box;
+	font-size: 1em;
+	background: Canvas;
+	color: CanvasText;
+}
+
+header { display: flex; flex-direction: column; gap: 4px; }
+
+h1 { margin: 0; font-size: 1.15em; font-weight: 600; }
+
+#status { margin: 0; min-height: 1.3em; overflow-wrap: anywhere; }
+
+#meter { display: flex; align-items: center; gap: 10px; }
+
+#bar { flex: 1; height: 8px; }
+
+#count { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+#rows {
+	flex: 1;
+	min-height: 6em;
+	margin: 0;
+	padding: 0;
+	list-style: none;
+	overflow-y: auto;
+	border: 1px solid var(--line);
+	border-radius: 6px;
+	background: Field;
+	color: FieldText;
+}
+
+#rows:focus-visible { outline: 2px solid AccentColor; outline-offset: 1px; }
+
+#rows > li {
+	display: grid;
+	grid-template-columns: auto 1fr auto;
+	column-gap: 10px;
+	align-items: baseline;
+	padding: 6px 10px;
+	border-bottom: 1px solid var(--line);
+}
+
+#rows > li:last-child { border-bottom: none; }
+
+.dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--done);
+	transform: translateY(-1px);
+}
+
+.title { overflow-wrap: anywhere; }
+
+.state { color: var(--muted); white-space: nowrap; font-size: 0.92em; }
+
+.detail {
+	grid-column: 2 / 4;
+	color: var(--muted);
+	font-size: 0.92em;
+	overflow-wrap: anywhere;
+}
+
+li.minor .dot { background: var(--muted); }
+li.minor .title { color: var(--muted); }
+
+li.error .dot { background: var(--error); }
+li.error .state { color: var(--error); }
+
+body.problems-only #rows > li:not(.error) { display: none; }
+
+#empty { margin: 0; color: var(--muted); text-align: center; }
+
+footer { display: flex; align-items: center; gap: 8px; }
+
+footer .spacer { flex: 1; }
+
+#filter-row { display: flex; align-items: center; gap: 6px; }
+
+button { min-width: 7em; padding: 4px 12px; }

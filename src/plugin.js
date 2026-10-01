@@ -1,7 +1,7 @@
 /**
  * The plugin: wires the services together and connects them to Zotero's UI.
  */
-import { ASSETS, LIST, NETWORK, PLUGIN } from "./config.js";
+import { ASSETS, chromeURL, LIST, NETWORK, PLUGIN } from "./config.js";
 import { eprintPageURL } from "./core/eprint.js";
 import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
@@ -20,7 +20,7 @@ import { convertSpringerAction } from "./zotero/springer.js";
 import { registerEprintColumn, unregisterEprintColumn } from "./ui/column.js";
 import { L10n } from "./ui/l10n.js";
 import { registerMenus, unregisterMenus } from "./ui/menus.js";
-import { BatchProgress, FolderImportProgress, ListProgress } from "./ui/progress.js";
+import { BatchProgress, DialogView, FolderImportProgress, ListProgress, ToastView } from "./ui/progress.js";
 import { resolveImportTarget } from "./ui/target.js";
 
 /**
@@ -169,18 +169,48 @@ export class IACRTools {
 	 */
 	async runCommand(commandId, items) {
 		const command = COMMANDS.find((c) => c.id === commandId);
-		const progress = new BatchProgress(this.Zotero, this.l10n, `progress-${commandId}`);
+		const progress = this.#openProgress((view) => new BatchProgress(this.Zotero, this.l10n, `progress-${commandId}`, view));
+		progress.setTotal(new Set(this.pipeline.eligible(items)).size);
 		try {
 			await this.#preloadCryptoBib(progress);
 			await this.pipeline.run(items, command.actions.map((name) => this.actions[name]), {
 				onItemDone: (item, results) => progress.itemDone(item, results),
 				concurrency: NETWORK.concurrency,
+				shouldStop: () => progress.stopRequested,
 			});
 			progress.finish();
 		}
 		catch (e) {
 			this.log(`${commandId} failed: ${e}`);
 			progress.fail(e);
+		}
+	}
+
+	/**
+	 * The progress window of a long run, or Zotero's small pop-up if the window
+	 * cannot be opened.
+	 * @template {BatchProgress} P
+	 * @param {(view: import("./ui/progress.js").ProgressView) => P} create
+	 * @returns {P}
+	 */
+	#openProgress(create) {
+		const { Zotero, l10n } = this;
+		try {
+			return create(new DialogView({
+				parentWindow: Zotero.getMainWindow(),
+				labels: {
+					stop: l10n.format("progress-stop"),
+					stopping: l10n.format("progress-stopping"),
+					close: l10n.format("progress-close"),
+					problemsOnly: l10n.format("progress-problems-only"),
+					noProblems: l10n.format("progress-no-problems"),
+				},
+				fallback: () => new ToastView(Zotero),
+			}));
+		}
+		catch (e) {
+			this.log(`The progress window could not be opened: ${e}`);
+			return create(new ToastView(Zotero));
 		}
 	}
 
@@ -257,7 +287,8 @@ export class IACRTools {
 		prefs.set("folderImportFindEprint", answer.checked);
 
 		const eprintAction = prefs.get("folderImportDownloadEprint") ? this.actions.downloadEprint : this.actions.findEprint;
-		const progress = new FolderImportProgress(Zotero, l10n);
+		const progress = this.#openProgress((view) => new FolderImportProgress(Zotero, l10n, view));
+		progress.setTotal(plan.files.length);
 		try {
 			await this.#preloadCryptoBib(progress);
 			progress.status("import-running", { count: counts.new });
@@ -271,7 +302,7 @@ export class IACRTools {
 					...(prefs.get("autoSyncCryptoBib") ? [this.actions.sync] : []),
 				],
 				eprintActions: answer.checked ? [eprintAction] : [],
-			}, { onFileDone: (file, result) => progress.fileDone(file, result) });
+			}, { onFileDone: (file, result) => progress.fileDone(file, result), shouldStop: () => progress.stopRequested });
 			progress.finish();
 		}
 		catch (e) {
@@ -300,7 +331,8 @@ export class IACRTools {
 		if (!list) return;
 		prefs.set("listDownloadPdf", list.download);
 
-		const progress = new ListProgress(Zotero, l10n);
+		const progress = this.#openProgress((view) => new ListProgress(Zotero, l10n, view));
+		progress.setTotal(list.entries.length);
 		try {
 			await this.#preloadCryptoBib(progress);
 			progress.status("list-running", { count: list.entries.length });
@@ -309,7 +341,7 @@ export class IACRTools {
 				collectionID: collection?.id ?? null,
 				metadataActions: prefs.get("autoSyncCryptoBib") ? [this.actions.sync] : [],
 				eprintActions: [list.download ? this.actions.downloadEprint : this.actions.findEprint],
-			}, { onEntryDone: (entry, result) => progress.entryDone(entry, result) });
+			}, { onEntryDone: (entry, result) => progress.entryDone(entry, result), shouldStop: () => progress.stopRequested });
 			progress.finish();
 		}
 		catch (e) {
@@ -333,7 +365,7 @@ export class IACRTools {
 		for (let round = 0; round < 8; round++) {
 			let answer;
 			try {
-				answer = this.dialogs.pasteList(window, this.rootURI + ASSETS.listDialog, {
+				answer = this.dialogs.pasteList(window, chromeURL(ASSETS.listDialog), {
 					title,
 					description: l10n.format("list-dialog-description", { target }),
 					acceptLabel: l10n.format("list-accept"),

@@ -8,18 +8,21 @@
  * Calls `fn` on every element with at most `limit` calls in flight, and
  * returns the results in input order. A rejection is passed on after the
  * calls already running have settled; no new calls are started after it.
+ * Once `shouldStop()` returns true no new calls are started either; the
+ * elements never started have no result (an `undefined` hole).
  * @template T, R
  * @param {T[]} items
  * @param {number} limit
  * @param {(item: T, index: number) => Promise<R>} fn
- * @returns {Promise<R[]>}
+ * @param {{ shouldStop?: () => boolean }} [options]
+ * @returns {Promise<Array<R | undefined>>}
  */
-export async function mapConcurrent(items, limit, fn) {
+export async function mapConcurrent(items, limit, fn, { shouldStop = () => false } = {}) {
 	const results = new Array(items.length);
 	let next = 0;
 	let failed = false;
 	const worker = async () => {
-		while (!failed && next < items.length) {
+		while (!failed && next < items.length && !shouldStop()) {
 			const index = next++;
 			try {
 				results[index] = await fn(items[index], index);

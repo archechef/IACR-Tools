@@ -81,12 +81,13 @@ export class Pipeline {
 	 * parallel (each item by one task only, so they never edit the same item).
 	 * @param {any[]} items Zotero items
 	 * @param {Action[]} actions
-	 * @param {{ onItemDone?: (item: any, results: ActionResult[]) => void, concurrency?: number }} [options]
-	 * @returns {Promise<Array<{ item: any, results: ActionResult[] }>>} in input order
+	 * @param {{ onItemDone?: (item: any, results: ActionResult[]) => void, concurrency?: number, shouldStop?: () => boolean }} [options]
+	 *   shouldStop: checked before each item; once true, no new item is started.
+	 * @returns {Promise<Array<{ item: any, results: ActionResult[] }>>} in input order, without the items never started
 	 */
-	async run(items, actions, { onItemDone = () => {}, concurrency = 1 } = {}) {
+	async run(items, actions, { onItemDone = () => {}, concurrency = 1, shouldStop } = {}) {
 		const unique = [...new Set(this.eligible(items))];
-		return mapConcurrent(unique, concurrency, async (item) => {
+		const summary = await mapConcurrent(unique, concurrency, async (item) => {
 			const context = new ItemContext(new ItemWrapper(item, this.Zotero), this.store);
 			const results = [];
 			for (const action of actions) {
@@ -94,7 +95,8 @@ export class Pipeline {
 			}
 			onItemDone(item, results);
 			return { item, results };
-		});
+		}, { shouldStop });
+		return summary.filter(Boolean);
 	}
 
 	async #runOne(action, context) {

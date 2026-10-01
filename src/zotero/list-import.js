@@ -54,10 +54,11 @@ export class ListImporter {
 	/**
 	 * @param {import("../core/list.js").ListEntry[]} entries
 	 * @param {ListOptions} options
-	 * @param {{ onEntryDone?: (entry: any, result: ListResult) => void }} [hooks]
-	 * @returns {Promise<Array<{ entry: any, result: ListResult }>>}
+	 * @param {{ onEntryDone?: (entry: any, result: ListResult) => void, shouldStop?: () => boolean }} [hooks]
+	 *   shouldStop: checked before each entry; once true, no new entry is started.
+	 * @returns {Promise<Array<{ entry: any, result: ListResult }>>} in list order, without the entries never started
 	 */
-	async run(entries, options, { onEntryDone = () => {} } = {}) {
+	async run(entries, options, { onEntryDone = () => {}, shouldStop } = {}) {
 		const resume = this.suspendAutoProcessing();
 		try {
 			// The list import compares papers only, never files.
@@ -66,7 +67,7 @@ export class ListImporter {
 			const steps = { place: serialized(), perItem: serializedByKey() };
 			// Entries are looked up and their PDFs downloaded in parallel; results
 			// are reported as they finish and returned in list order.
-			return await mapConcurrent(entries, NETWORK.concurrency, async (entry) => {
+			const summary = await mapConcurrent(entries, NETWORK.concurrency, async (entry) => {
 				/** @type {ListResult} */
 				let result;
 				try {
@@ -78,7 +79,8 @@ export class ListImporter {
 				}
 				onEntryDone(entry, result);
 				return { entry, result };
-			});
+			}, { shouldStop });
+			return summary.filter(Boolean);
 		}
 		finally {
 			resume();

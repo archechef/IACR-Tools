@@ -38,7 +38,7 @@ function checkMenu({ menuID, pluginID, target, menus }) {
 
 function createEnvironment(dataDir) {
 	const Zotero = createFakeZotero({ clipboard: "# reading list\nEC:GHKR08\n" });
-	const registered = { menus: [], columns: [], panes: [], progress: [] };
+	const registered = { menus: [], columns: [], panes: [], progress: [], chrome: [], dialogs: [] };
 	const defaults = new Map();
 	Object.assign(Zotero, {
 		initializationPromise: Promise.resolve(),
@@ -66,6 +66,13 @@ function createEnvironment(dataDir) {
 				formatValueSync(id, args) {
 					return args ? `${id} ${JSON.stringify(args)}` : id;
 				}
+			},
+			// The progress window: recorded; `registered.closeDialogs` makes the
+			// user close it right away.
+			openDialog(url, name, features, io) {
+				const window = { url, io, closed: Boolean(registered.closeDialogs), close() { this.closed = true; } };
+				registered.dialogs.push(window);
+				return window;
 			},
 		}),
 		ProgressWindow: class {
@@ -101,6 +108,7 @@ function createEnvironment(dataDir) {
 		},
 	});
 	const Services = {
+		io: { newURI: (spec) => ({ spec }) },
 		prefs: {
 			getDefaultBranch: () => ({
 				setBoolPref: (k, v) => defaults.set(k, v),
@@ -139,7 +147,19 @@ function createEnvironment(dataDir) {
 		clearAll: () => timerIDs.forEach(clearTimeout),
 	};
 	const ChromeUtils = { importESModule: () => timers };
-	return { Zotero, Services, IOUtils, PathUtils, ChromeUtils, registered, defaults, timers };
+	const Ci = { amIAddonManagerStartup: "amIAddonManagerStartup" };
+	const Cc = {
+		"@mozilla.org/addons/addon-manager-startup;1": {
+			getService: () => ({
+				registerChrome(manifestURI, entries) {
+					const registration = { manifest: manifestURI.spec, entries, destructed: false };
+					registered.chrome.push(registration);
+					return { destruct: () => (registration.destructed = true) };
+				},
+			}),
+		},
+	};
+	return { Zotero, Services, IOUtils, PathUtils, ChromeUtils, Cc, Ci, registered, defaults, timers };
 }
 
 test("the built plugin starts, registers its UI and runs its commands", { skip: !existsSync(addonDir) }, async () => {
@@ -147,13 +167,17 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	const env = createEnvironment(dataDir);
 	const scope = vm.createContext({
 		Zotero: env.Zotero, Services: env.Services, IOUtils: env.IOUtils, PathUtils: env.PathUtils,
-		ChromeUtils: env.ChromeUtils, APP_SHUTDOWN: 2, console,
+		ChromeUtils: env.ChromeUtils, Cc: env.Cc, Ci: env.Ci, APP_SHUTDOWN: 2, console,
 	});
 	vm.runInContext(readFileSync(new URL("bootstrap.js", addonDir), "utf8"), scope);
 	await vm.runInContext("startup({ rootURI: 'rootURI:' })", scope);
 
 	const plugin = env.Zotero[PLUGIN.globalName];
 	assert.ok(plugin, "plugin exposed on Zotero");
+	// (JSON: the arrays come from the sandbox, with its own Array prototype.)
+	assert.deepEqual(JSON.parse(JSON.stringify(env.registered.chrome.map(({ manifest, entries }) => ({ manifest, entries })))), [
+		{ manifest: "rootURI:manifest.json", entries: [["content", PLUGIN.chromePackage, "content/"]] },
+	], "content/ registered as a chrome package");
 	assert.equal(env.defaults.get(`${PLUGIN.prefBranch}autoConvertSpringer`), true);
 	assert.equal(env.registered.panes.length, 1);
 	assert.equal(env.registered.columns[0].dataKey, "eprint");
@@ -165,7 +189,9 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	});
 	const submenu = env.registered.menus[0].menus[0].menus;
 	const command = (id) => submenu.find((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`);
+	env.registered.closeDialogs = true;
 	await command("process-all").onCommand(null, { items: [item] });
+	env.registered.closeDialogs = false;
 
 	assert.equal(item.itemType, "conferencePaper");
 	assert.equal(item.getField("citationKey"), "EC:GHKR08");
@@ -173,6 +199,17 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.match(item.getField("extra"), /^IACR ePrint: 2008\/045$/m);
 	assert.equal(env.registered.columns[0].dataProvider(item), "2008/045");
 
+	// The command reports in its own window; it was closed before the end, so
+	// the outcome also appears in Zotero's pop-up.
+	const progressWindow = env.registered.dialogs.at(-1);
+	assert.equal(progressWindow.url, `chrome://${PLUGIN.chromePackage}/content/progress.xhtml`);
+	const { state } = progressWindow.io;
+	assert.equal(state.headline, `${PLUGIN.l10nPrefix}-progress-process-all`);
+	assert.equal(state.finished, true);
+	assert.deepEqual([state.done, state.total], [1, 1]);
+	assert.equal(state.rows.length, 1);
+	assert.match(state.rows[0].title, /Threshold RSA/);
+	assert.match(state.status, /summary.*"changed":1/);
 	const progress = env.registered.progress.at(-1);
 	assert.equal(progress.headline, `${PLUGIN.l10nPrefix}-progress-process-all`);
 	assert.ok(progress.lines.some((line) => /summary.*"changed":1/.test(line.text)), "summary shown");
@@ -213,9 +250,9 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(asked.length, 1);
 	assert.match(asked[0].text, /import-confirm .*"new":1/);
 	assert.equal(env.Zotero.Prefs.get(`${PLUGIN.prefBranch}folderImport.findEprint`), false, "checkbox remembered");
-	const importProgress = env.registered.progress.at(-1);
+	const importProgress = env.registered.dialogs.at(-1).io.state;
 	assert.equal(importProgress.headline, `${PLUGIN.l10nPrefix}-progress-import-folder`);
-	assert.ok(importProgress.lines.some((line) => /import-summary.*"unrecognized":1/.test(line.text)), "import summary shown");
+	assert.match(importProgress.status, /import-summary.*"unrecognized":1/, "import summary shown");
 	assert.match(asked[0].text, /"target":"Crypto"/);
 	assert.deepEqual(env.Zotero.collectionPaths(), ["Crypto"], "no collections created for the folders");
 	const imported = (await env.Zotero.Items.getAll(1)).filter((item) => item.isFileAttachment?.());
@@ -232,7 +269,7 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(listItem.l10nID, `${PLUGIN.l10nPrefix}-menu-add-list`);
 	await listItem.onCommand(null, {});
 	assert.equal(pasted.length, 1);
-	assert.ok(pasted[0].url.endsWith("content/list-dialog.xhtml"), "the plugin's own dialog is opened");
+	assert.equal(pasted[0].url, `chrome://${PLUGIN.chromePackage}/content/list-dialog.xhtml`, "the paste box is opened from the chrome package");
 	assert.match(pasted[0].io.text, /EC:GHKR08/, "pre-filled from the clipboard");
 	assert.match(pasted[0].io.description, /"target":"Crypto"/, "the destination is named");
 	// The library already holds this paper (it was processed above), so the list
@@ -241,9 +278,9 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(matching.length, 1, "no duplicate item");
 	assert.ok(matching[0].inCollection(target.id), "filed in the selected collection");
 	assert.equal(matching[0].attachments[0]?.url, "https://eprint.iacr.org/2008/045.pdf", "ePrint PDF downloaded");
-	const listProgress = env.registered.progress.at(-1);
+	const listProgress = env.registered.dialogs.at(-1).io.state;
 	assert.equal(listProgress.headline, `${PLUGIN.l10nPrefix}-progress-add-list`);
-	assert.ok(listProgress.lines.some((line) => /list-summary.*"updated":1/.test(line.text)), "list summary shown");
+	assert.match(listProgress.status, /list-summary.*"updated":1/, "list summary shown");
 
 	// The IACR submenu copies the selected papers back out as a list.
 	const copy = submenu.find((m) => m.l10nID?.endsWith("copy-list"));
@@ -262,6 +299,7 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 
 	await vm.runInContext("shutdown({}, 1)", scope);
 	assert.equal(env.Zotero[PLUGIN.globalName], undefined);
+	assert.equal(env.registered.chrome[0].destructed, true, "chrome package unregistered");
 	env.timers.clearAll();
 	rmSync(dataDir, { recursive: true, force: true });
 });

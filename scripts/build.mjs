@@ -26,6 +26,7 @@ const PLACEHOLDERS = {
 	__PLUGIN_NAME__: PLUGIN.name,
 	__PLUGIN_ID__: PLUGIN.id,
 	__GLOBAL_NAME__: PLUGIN.globalName,
+	__CHROME_PACKAGE__: PLUGIN.chromePackage,
 	__PREF_BRANCH__: PLUGIN.prefBranch,
 	__L10N_PREFIX__: PLUGIN.l10nPrefix,
 	__FTL__: PLUGIN.ftl,

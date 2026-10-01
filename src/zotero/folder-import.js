@@ -137,16 +137,18 @@ export class FolderImporter {
 	 * Imports the files of a plan.
 	 * @param {ImportPlan} plan
 	 * @param {ImportOptions} options
-	 * @param {{ onFileDone?: (file: FolderFile, result: ImportResult) => void }} [hooks]
+	 * @param {{ onFileDone?: (file: FolderFile, result: ImportResult) => void, shouldStop?: () => boolean }} [hooks]
+	 *   shouldStop: checked before each file; once true, the remaining files are left alone.
 	 * @returns {Promise<Array<{ file: FolderFile, result: ImportResult }>>}
 	 */
-	async run(plan, options, { onFileDone = () => {} } = {}) {
+	async run(plan, options, { onFileDone = () => {}, shouldStop = () => false } = {}) {
 		const resume = this.suspendAutoProcessing();
 		const collections = new CollectionTree(this.Zotero, plan.libraryID, options.collectionID, plan.folderName, options.subcollections);
 		const link = options.link && plan.libraryID === this.Zotero.Libraries.userLibraryID;
 		const summary = [];
 		try {
 			for (const file of plan.files) {
+				if (shouldStop()) break;
 				/** @type {ImportResult} */
 				let result;
 				try {

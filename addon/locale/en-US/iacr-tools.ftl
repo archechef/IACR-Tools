@@ -41,6 +41,12 @@ iacr-tools-progress-process-all = Processing items
 iacr-tools-progress-update-cryptobib = Updating CryptoBib
 iacr-tools-progress-summary = { $changed } updated, { $unchanged } unchanged, { $skipped } skipped, { $failed } failed
 iacr-tools-progress-failed = The operation failed.
+iacr-tools-progress-stop = Stop
+iacr-tools-progress-stopping = Stopping…
+iacr-tools-progress-stopped = Stopped; the remaining papers were left alone.
+iacr-tools-progress-close = Close
+iacr-tools-progress-problems-only = Show only problems
+iacr-tools-progress-no-problems = No problems.
 
 iacr-tools-status-changed = updated
 iacr-tools-status-unchanged = unchanged

@@ -13,6 +13,12 @@ export const PLUGIN = Object.freeze({
 	/** Prefix of all Fluent message ids. */
 	l10nPrefix: "iacr-tools",
 	prefBranch: "extensions.iacr-tools.",
+	/**
+	 * Name under which addon/content/ is registered as chrome://<name>/content/.
+	 * The plugin's own windows must be opened from there: loaded straight from
+	 * the .xpi (a jar: URL), they stay blank.
+	 */
+	chromePackage: "iacr-tools",
 	/** Sub-folder of the Zotero data directory used for the CryptoBib cache. */
 	dataDirName: "iacr-tools",
 	/**
@@ -35,7 +41,12 @@ export const ASSETS = Object.freeze({
 	preferenceScript: "content/preferences.js",
 	/** The paste box of "Add Papers from a List". */
 	listDialog: "content/list-dialog.xhtml",
+	/** The window that follows a list import, folder import or menu command. */
+	progressDialog: "content/progress.xhtml",
 });
+
+/** chrome:// URL of a file in addon/content/ ("content/x.xhtml" → "chrome://iacr-tools/content/x.xhtml"). */
+export const chromeURL = (asset) => `chrome://${PLUGIN.chromePackage}/${asset}`;
 
 /**
  * User preferences with their default values. Defaults are registered on the

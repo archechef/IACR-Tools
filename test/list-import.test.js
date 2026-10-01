@@ -378,3 +378,17 @@ test("entries are looked up in parallel, and a paper listed twice is added and d
 	assert.equal(twice["2008/045"].item, twice["EPRINT:GHKR08"].item, "one item for both entries");
 	assert.equal(twice["2008/045"].item.attachments.length, 1, "its PDF is downloaded once");
 });
+
+test("Stop leaves the remaining entries alone", async () => {
+	let stop = false;
+	const entries = parseList("EC:Bernstein08\nJC:LibYun20\nC:ZSELLR24\nACISP:GHMRS22\n2008/045\nEC:GHKR08");
+	const summary = await env.importer.run(entries, env.options({ eprintActions: [] }), {
+		onEntryDone: () => (stop = true),
+		shouldStop: () => stop,
+	});
+	// Entries already started finish; no new one starts after the first is done.
+	assert.ok(summary.length >= 1 && summary.length <= 4, `${summary.length} entries processed`);
+	assert.ok(summary.every(({ result }) => result.status === "added"));
+	const added = (await env.Zotero.Items.getAll(1)).filter((item) => item.isRegularItem());
+	assert.equal(added.length, summary.length, "nothing was added for the entries never started");
+});

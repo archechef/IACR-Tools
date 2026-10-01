@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<!--
+	The window that follows a list import, a folder import or a menu command.
+	Plain HTML, like the paste box; the state and all labels come from the
+	caller through window.arguments[0] (see DialogView in src/ui/progress.js).
+-->
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta charset="utf-8"/>
+	<title></title>
+	<link rel="stylesheet" href="progress.css"/>
+</head>
+<body>
+	<header>
+		<h1 id="headline"></h1>
+		<p id="status" role="status" aria-live="polite"></p>
+		<div id="meter">
+			<progress id="bar"></progress>
+			<span id="count"></span>
+		</div>
+	</header>
+	<ol id="rows" tabindex="0"></ol>
+	<p id="empty" hidden="hidden"></p>
+	<footer>
+		<label id="filter-row"><input type="checkbox" id="problems-only"/><span id="problems-only-label"></span></label>
+		<span class="spacer"></span>
+		<button id="stop" type="button"></button>
+		<button id="close" type="button" class="default"></button>
+	</footer>
+	<script src="progress.js"/>
+</body>
+</html>
