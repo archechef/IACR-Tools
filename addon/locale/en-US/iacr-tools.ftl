@@ -18,6 +18,8 @@ iacr-tools-menu-link-versions =
     .label = Link ePrint and Published Versions
 iacr-tools-menu-process-all =
     .label = Do All of the Above (Except Downloads)
+iacr-tools-menu-find-duplicates =
+    .label = Find Other Copies and Versions…
 iacr-tools-menu-open-eprint =
     .label = Open ePrint Page
 iacr-tools-menu-copy-list =
@@ -37,11 +39,15 @@ iacr-tools-menu-copy-collection-list =
     .label = Copy Papers as List
 iacr-tools-menu-export-collection-bibtex =
     .label = Export BibTeX of Papers Not in CryptoBib…
+iacr-tools-menu-find-collection-duplicates =
+    .label = Find Duplicate Papers…
 
 ## Tools menu
 
 iacr-tools-menu-update-cryptobib =
     .label = Update CryptoBib Database
+iacr-tools-menu-find-library-duplicates =
+    .label = Find Duplicate Papers…
 
 ## Progress window
 
@@ -191,6 +197,41 @@ iacr-tools-latex-exported = { $count ->
         [0] .
        *[other] ; { $inCryptoBib } others are in CryptoBib.
     }
+
+## Duplicate papers
+
+iacr-tools-dup-title = Duplicate Papers
+iacr-tools-progress-find-duplicates = Looking for duplicate papers
+iacr-tools-dup-scanning = Comparing the papers of the library…
+iacr-tools-dup-selection = { $count ->
+        [one] the selected paper
+       *[other] the { $count } selected papers
+    }
+iacr-tools-dup-headline = Duplicate papers: { $where }
+iacr-tools-dup-status = { $papers } papers compared. { $groups ->
+        [one] One group of papers is probably the same paper.
+       *[other] { $groups } groups of papers are probably the same paper.
+    } Copies of one publication can be merged; versions of one paper (ePrint, conference, journal) can be linked.
+iacr-tools-dup-nothing = No duplicate papers were found among { $papers } papers.
+iacr-tools-dup-no-window = { $groups } groups of duplicate papers were found, but the report window could not be opened.
+iacr-tools-dup-close = Close
+iacr-tools-dup-link-all = Link All Versions
+iacr-tools-dup-none = Nothing left to report.
+iacr-tools-dup-untitled = (untitled)
+iacr-tools-dup-attachments = { $count ->
+        [one] one attachment
+       *[other] { $count } attachments
+    }
+iacr-tools-dup-copies = Copies
+iacr-tools-dup-versions = Versions
+iacr-tools-dup-show = Show in Library
+iacr-tools-dup-keep-which = { $count } copies of one publication. Keep:
+iacr-tools-dup-merge = Merge { $count } Copies
+iacr-tools-dup-link = Link Versions
+iacr-tools-dup-dismiss = Not the Same Paper
+iacr-tools-dup-merged = Merged into “{ $title }”; the other copies are in the trash.
+iacr-tools-dup-linked = Versions linked as related items.
+iacr-tools-dup-dismissed = Marked as different papers; this group will not be reported again.
 
 ## Item tree
 

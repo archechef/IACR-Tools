@@ -6,6 +6,8 @@ A Zotero 8–10 plugin for cryptographers:
 - **Metadata comes from [CryptoBib](https://cryptobib.di.ens.fr).** Items are matched by DOI, then by title and authors (with fuzzy matching). CryptoBib's values then replace or fill in the title, authors, editors, proceedings title, conference name (`EUROCRYPT 2008`), volume, pages, series, publisher, venue, date and DOI. The CryptoBib key (`EC:Bernstein08`) is stored as the citation key.
 - **ePrint versions.** The plugin finds the IACR ePrint version of a paper (via CryptoBib, then dblp, then eprint.iacr.org search), stores its id and can download the PDF. It notices when the paper was revised on ePrint and fetches the new PDF.
 
+- **Duplicate papers across versions.** A report of papers that are probably the same paper (copies of one publication, or its ePrint, conference and journal versions), to merge the copies and link the versions.
+
 - **Preprints catch up with their publication.** A preprint that CryptoBib lists as published becomes the published paper (keeping its ePrint id and PDF), and the ePrint and published versions of a paper are linked as related items.
 
 - **LaTeX with CryptoBib.** Copy a `\cite{…}` for the selected papers with their CryptoBib keys, and export only the papers CryptoBib lacks as a `.bib` file to use next to `crypto.bib`.
@@ -72,12 +74,20 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
   - Link ePrint and Published Versions: marks the two versions of a paper as related items (by shared ePrint id, or by title and authors).
   - Do All of the Above (Except Downloads): convert, update preprints, update from CryptoBib, find the ePrint version, link versions.
   - Copy as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib…
+  - Find Other Copies and Versions…: the duplicate report (below) for the selected papers
   - Open ePrint Page
 - **Tools → Update CryptoBib Database**: fetches the latest export.
+- **Tools → Find Duplicate Papers…** (or right-click a collection): the duplicate report for the library or the collection.
 - Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
 - **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted and updated from CryptoBib automatically. ePrint lookup and download on save can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
 CryptoBib (~40 MB) is downloaded on first use into `<Zotero data dir>/iacr-tools/`. It is refreshed after 30 days, in the background.
+
+## Duplicate papers
+
+Zotero's own *Duplicate Items* finds copies of the same item type. The duplicate report also finds the versions of a paper: its ePrint preprint, the conference paper and the journal version. Papers belong together when they share a DOI or an ePrint id, or when their titles and authors match (years are not compared, since versions can be years apart). Two items of the same type with different DOIs are different publications.
+
+Each group is a card. Copies of one publication (same type, or the same DOI, e.g. a Springer *Book Section* next to the *Conference Paper*) can be merged with Zotero's own merge: pick the one to keep (by default the one with a CryptoBib key, else a DOI, else more attachments), and its notes, tags, collections, related items and attachments are combined; the other copies go to the trash. Versions can be linked as related items, one group at a time or all at once. **Not the Same Paper** hides a group for good (until it gains a member); groups whose versions are all linked are not reported again.
 
 ## LaTeX with CryptoBib
 

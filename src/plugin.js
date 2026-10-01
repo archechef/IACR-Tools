@@ -13,6 +13,7 @@ import { itemsAsList } from "./zotero/list-export.js";
 import { parseList } from "./core/list.js";
 import { cryptoBibSource, dblpSource, EprintFinder, iacrSearchSource } from "./zotero/eprint-sources.js";
 import { ItemWrapper } from "./zotero/item.js";
+import { DuplicateFinder } from "./zotero/duplicates.js";
 import { LatexSupport } from "./zotero/latex.js";
 import { LibraryIndex } from "./zotero/library-index.js";
 import { createVersionActions } from "./zotero/versions.js";
@@ -23,6 +24,7 @@ import { convertSpringerAction } from "./zotero/springer.js";
 import { registerEprintColumn, unregisterEprintColumn } from "./ui/column.js";
 import { L10n } from "./ui/l10n.js";
 import { registerMenus, unregisterMenus } from "./ui/menus.js";
+import { DuplicatesView } from "./ui/duplicates.js";
 import { BatchProgress, DialogView, FolderImportProgress, ListProgress, ToastView } from "./ui/progress.js";
 import { resolveImportTarget } from "./ui/target.js";
 
@@ -67,8 +69,9 @@ export class IACRTools {
 	 * @param {{ setTimeout: Function, clearTimeout: Function }} env.timers
 	 * @param {string} env.rootURI
 	 * @param {import("./ui/dialogs.js").Dialogs} env.dialogs
+	 * @param {(master: any, others: any[]) => Promise<void>} [env.mergeItems]  Zotero's item merge.
 	 */
-	constructor({ Zotero, Services, IOUtils, PathUtils, timers, rootURI, dialogs }) {
+	constructor({ Zotero, Services, IOUtils, PathUtils, timers, rootURI, dialogs, mergeItems = (master, others) => Zotero.Items.merge(master, others) }) {
 		this.Zotero = Zotero;
 		this.dialogs = dialogs;
 		this.rootURI = rootURI;
@@ -113,6 +116,7 @@ export class IACRTools {
 			loadLibrary: (libraryID) => new LibraryIndex({ Zotero, files, eprintKey: eprintKey() }).load(libraryID, { files: false }),
 		});
 		this.latex = new LatexSupport({ Zotero, store: this.store, eprintKey });
+		this.duplicates = new DuplicateFinder({ Zotero, prefs: this.prefs, mergeItems });
 		this.autoProcessor = new AutoProcessor({
 			Zotero,
 			pipeline: this.pipeline,
@@ -560,6 +564,56 @@ export class IACRTools {
 			return null;
 		}
 		return this.exportBibTeXNotInCryptoBib(this.Zotero.Items.get(collection.getChildItems(true)), collection.name);
+	}
+
+	/**
+	 * Tools menu (whole library), collection menu (groups touching the
+	 * collection) and item menu (groups touching the selection): opens the
+	 * report of papers that are probably the same paper.
+	 * @param {{ context?: any, items?: any[] }} [source]
+	 */
+	async findDuplicates({ context, items } = {}) {
+		const { Zotero, l10n } = this;
+		const title = l10n.format("dup-title");
+		const target = resolveImportTarget(Zotero, context);
+		const selected = (items ?? []).filter((item) => item?.isRegularItem?.());
+		let libraryID = target.libraryID;
+		let scope = null;
+		let where = Zotero.Libraries.get(libraryID)?.name ?? "";
+		if (selected.length) {
+			libraryID = selected[0].libraryID;
+			scope = new Set(selected.map((item) => item.id));
+			where = l10n.format("dup-selection", { count: selected.length });
+		}
+		else if (context && target.collection) {
+			scope = new Set(target.collection.getChildItems(true));
+			where = target.collection.name;
+		}
+		const progress = new BatchProgress(Zotero, l10n, "progress-find-duplicates");
+		progress.status("dup-scanning");
+		let report;
+		try {
+			report = await this.duplicates.find(libraryID, { scope });
+		}
+		catch (e) {
+			this.log(`Looking for duplicates failed: ${e}\n${e.stack ?? ""}`);
+			progress.fail(e);
+			return null;
+		}
+		progress.close();
+		if (!report.groups.length) {
+			this.dialogs.alert(target.window, title, l10n.format("dup-nothing", { papers: report.papers }));
+			return report;
+		}
+		const view = new DuplicatesView({ Zotero, l10n, finder: this.duplicates, log: this.log });
+		try {
+			view.open(target.window ?? Zotero.getMainWindow(), report, where);
+		}
+		catch (e) {
+			this.log(`The duplicate report could not be opened: ${e}`);
+			this.dialogs.alert(target.window, title, l10n.format("dup-no-window", { groups: report.groups.length }));
+		}
+		return view;
 	}
 
 	/** The clipboard as text, if it holds any. */

@@ -363,8 +363,9 @@ test("a download that is not CryptoBib, or lost most of its entries, never repla
 test("every Fluent id used by the plugin exists in the locale file", () => {
 	const read = (path) => readFileSync(new URL(`../${path}`, import.meta.url), "utf8");
 	const defined = new Set([...read("addon/locale/en-US/iacr-tools.ftl").matchAll(/^([a-z0-9-]+) =/gm)].map((m) => m[1]));
-	const sources = ["src/plugin.js", "src/ui/menus.js", "src/ui/progress.js"].map(read).join("\n");
-	const literal = [...sources.matchAll(/(?:format|status|finish|L10n\.id)\("([a-z0-9-]+)"/g)].map((m) => m[1]);
+	const sources = ["src/plugin.js", "src/ui/menus.js", "src/ui/progress.js", "src/ui/duplicates.js", "addon/content/duplicates.js"]
+		.map(read).join("\n");
+	const literal = [...sources.matchAll(/(?:format|status|finish|L10n\.id|\bt)\("([a-z0-9-]+)"/g)].map((m) => m[1]);
 	const dynamic = [
 		...COMMANDS.flatMap(({ id }) => [`menu-${id}`, `progress-${id}`]),
 		...["changed", "unchanged", "skipped", "failed"].map((s) => `status-${s}`),

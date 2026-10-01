@@ -310,6 +310,24 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.match(bib, /@journalArticle\{lovelace1843,/);
 	assert.doesNotMatch(bib, /GHKR08|Threshold/, "papers in CryptoBib are left to crypto.bib");
 
+	// Duplicate papers: from the Tools menu, the collection menu and the item menu.
+	const toolsMenu = env.registered.menus.find((m) => m.target === "main/menubar/tools");
+	const findInLibrary = toolsMenu.menus.find((m) => m.l10nID?.endsWith("menu-find-library-duplicates"));
+	const collectionMenu = env.registered.menus.find((m) => m.target === "main/library/collection");
+	assert.ok(collectionMenu.menus.some((m) => m.l10nID?.endsWith("menu-find-collection-duplicates")));
+	assert.ok(submenu.some((m) => m.l10nID?.endsWith("menu-find-duplicates")));
+	const copyOfPaper = env.Zotero.addItem("bookSection", {
+		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", date: "2008", extra: "DOI: 10.1007/978-3-540-78967-3_6" },
+		creators: [{ firstName: "R.", lastName: "Gennaro", creatorType: "author" }],
+	});
+	const reportWindows = env.registered.dialogs.length;
+	await findInLibrary.onCommand(null, {});
+	const reportWindow = env.registered.dialogs.at(-1);
+	assert.equal(env.registered.dialogs.length, reportWindows + 1, "the report opens");
+	assert.equal(reportWindow.url, `chrome://${PLUGIN.chromePackage}/content/duplicates.xhtml`);
+	const reportGroup = reportWindow.io.state.groups.find((g) => g.clusters.flat().some((p) => p.id === copyOfPaper.id));
+	assert.ok(reportGroup, "the copy is reported with the paper it duplicates");
+
 	// Preferences: the number of parallel fetches is kept within bounds; without
 	// the progress window, commands report in Zotero's pop-up.
 	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}concurrency`, 50);

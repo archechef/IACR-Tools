@@ -46,6 +46,11 @@ export function registerMenus({ Zotero, rootURI, plugin }) {
 				},
 				{
 					menuType: "menuitem",
+					l10nID: L10n.id("menu-find-duplicates"),
+					onCommand: (event, context) => plugin.findDuplicates({ items: context.items ?? [] }),
+				},
+				{
+					menuType: "menuitem",
 					l10nID: L10n.id("menu-open-eprint"),
 					onShowing: (event, context) => context.setVisible(plugin.eprintIdsOf(context.items ?? []).length > 0),
 					onCommand: (event, context) => plugin.openEprintPages(context.items ?? []),
@@ -58,11 +63,18 @@ export function registerMenus({ Zotero, rootURI, plugin }) {
 		menuID: `${PLUGIN.l10nPrefix}-tools`,
 		pluginID: PLUGIN.id,
 		target: "main/menubar/tools",
-		menus: [{
-			menuType: "menuitem",
-			l10nID: L10n.id("menu-update-cryptobib"),
-			onCommand: () => plugin.updateCryptoBib(),
-		}],
+		menus: [
+			{
+				menuType: "menuitem",
+				l10nID: L10n.id("menu-update-cryptobib"),
+				onCommand: () => plugin.updateCryptoBib(),
+			},
+			{
+				menuType: "menuitem",
+				l10nID: L10n.id("menu-find-library-duplicates"),
+				onCommand: () => plugin.findDuplicates(),
+			},
+		],
 	});
 
 	const importMenus = [
@@ -102,6 +114,12 @@ export function registerMenus({ Zotero, rootURI, plugin }) {
 				l10nID: L10n.id("menu-export-collection-bibtex"),
 				icon: rootURI + ASSETS.icon,
 				onCommand: (event, context) => plugin.exportCollectionBibTeX(context),
+			},
+			{
+				menuType: "menuitem",
+				l10nID: L10n.id("menu-find-collection-duplicates"),
+				icon: rootURI + ASSETS.icon,
+				onCommand: (event, context) => plugin.findDuplicates({ context }),
 			},
 		],
 	});

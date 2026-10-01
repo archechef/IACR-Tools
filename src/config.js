@@ -43,6 +43,8 @@ export const ASSETS = Object.freeze({
 	listDialog: "content/list-dialog.xhtml",
 	/** The window that follows a list import, folder import or menu command. */
 	progressDialog: "content/progress.xhtml",
+	/** The report of duplicate papers. */
+	duplicatesDialog: "content/duplicates.xhtml",
 });
 
 /** chrome:// URL of a file in addon/content/ ("content/x.xhtml" → "chrome://iacr-tools/content/x.xhtml"). */
@@ -90,6 +92,8 @@ export const PREFS = Object.freeze({
 	concurrency: { key: "concurrency", default: 4 },
 	/** Long runs report in a window of their own; off: Zotero's small pop-up. */
 	progressWindow: { key: "progressWindow", default: true },
+	/** Duplicate groups marked "not the same paper" (JSON list of group signatures). */
+	duplicatesDismissed: { key: "duplicates.dismissed", default: "[]" },
 });
 
 const EPRINT_ITEM_TYPE = "preprint";
@@ -293,6 +297,12 @@ export const LATEX = Object.freeze({
 	/** Default name of the exported file, e.g. "my-paper-not-in-cryptobib.bib". */
 	fileName: (source) => `${source || "papers"}-not-in-cryptobib.bib`,
 	fileFilter: "*.bib",
+});
+
+/** The duplicate report. */
+export const DUPLICATES = Object.freeze({
+	/** Groups marked "not the same paper" that are remembered. */
+	maxDismissed: 1000,
 });
 
 export const PROGRESS = Object.freeze({
