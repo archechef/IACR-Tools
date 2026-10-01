@@ -199,6 +199,8 @@ export const NETWORK = Object.freeze({
 	downloadTimeoutMs: 5 * 60_000,
 	/** Give up retrying throttled (429/5xx) lookups after this long. */
 	errorDelayMaxMs: 15_000,
+	/** Papers looked up or downloaded at the same time (list import, menu commands); kept low to be polite to eprint.iacr.org and dblp. */
+	concurrency: 4,
 });
 
 export const AUTO = Object.freeze({

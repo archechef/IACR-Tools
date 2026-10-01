@@ -270,6 +270,27 @@ test("preprint items saved from eprint.iacr.org get their id recorded without a 
 	assert.equal(env.http.requests.length, 0);
 });
 
+test("menu commands download several ePrint PDFs at once, one task per item", async () => {
+	const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	let inFlight = 0;
+	let maxInFlight = 0;
+	const { Attachments } = env.Zotero;
+	const importFromURL = Attachments.importFromURL.bind(Attachments);
+	Attachments.importFromURL = async (options) => {
+		maxInFlight = Math.max(maxInFlight, ++inFlight);
+		await delay(10);
+		inFlight--;
+		return importFromURL(options);
+	};
+	const items = Array.from({ length: 10 }, (_, i) =>
+		env.Zotero.addItem("preprint", { fields: { title: `Paper ${i}`, url: `https://eprint.iacr.org/2024/${100 + i}` } }));
+
+	const summary = await env.pipeline.run([...items, items[0]], [env.eprint.download], { concurrency: 4 });
+	assert.deepEqual(summary.map(({ item }) => item), items, "each item once, in input order");
+	assert.equal(maxInFlight, 4);
+	for (const item of items) assert.equal(item.attachments.length, 1);
+});
+
 test("new items are processed automatically, synced ones are left alone", async () => {
 	const auto = new AutoProcessor({
 		Zotero: env.Zotero,

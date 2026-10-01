@@ -5,6 +5,7 @@
  * runs a list of actions over many items, sharing an {@link ItemContext} per
  * item so that expensive lookups (e.g. the CryptoBib match) happen once.
  */
+import { mapConcurrent } from "../core/concurrency.js";
 import { ItemWrapper } from "./item.js";
 
 /**
@@ -75,24 +76,25 @@ export class Pipeline {
 	}
 
 	/**
-	 * Runs the actions on each item, in order. Items are processed sequentially to
-	 * be gentle with online services.
+	 * Runs the actions on each item; the actions of one item run in order. By
+	 * default items are processed one at a time; menu commands process a few in
+	 * parallel (each item by one task only, so they never edit the same item).
 	 * @param {any[]} items Zotero items
 	 * @param {Action[]} actions
-	 * @param {{ onItemDone?: (item: any, results: ActionResult[]) => void }} [hooks]
+	 * @param {{ onItemDone?: (item: any, results: ActionResult[]) => void, concurrency?: number }} [options]
+	 * @returns {Promise<Array<{ item: any, results: ActionResult[] }>>} in input order
 	 */
-	async run(items, actions, { onItemDone = () => {} } = {}) {
-		const summary = [];
-		for (const item of this.eligible(items)) {
+	async run(items, actions, { onItemDone = () => {}, concurrency = 1 } = {}) {
+		const unique = [...new Set(this.eligible(items))];
+		return mapConcurrent(unique, concurrency, async (item) => {
 			const context = new ItemContext(new ItemWrapper(item, this.Zotero), this.store);
 			const results = [];
 			for (const action of actions) {
 				results.push(await this.#runOne(action, context));
 			}
 			onItemDone(item, results);
-			summary.push({ item, results });
-		}
-		return summary;
+			return { item, results };
+		});
 	}
 
 	async #runOne(action, context) {

@@ -8,7 +8,8 @@
  */
 import { eprintPaperFromPage } from "../core/eprint-page.js";
 import { eprintIdOf } from "../core/mapping.js";
-import { EPRINT } from "../config.js";
+import { EPRINT, NETWORK } from "../config.js";
+import { mapConcurrent, serialized, serializedByKey } from "../core/concurrency.js";
 import { createItemFromEprintPaper, createItemFromRecord } from "./create-item.js";
 import { LibraryIndex } from "./library-index.js";
 
@@ -58,50 +59,96 @@ export class ListImporter {
 	 */
 	async run(entries, options, { onEntryDone = () => {} } = {}) {
 		const resume = this.suspendAutoProcessing();
-		const summary = [];
 		try {
 			// The list import compares papers only, never files.
 			const index = await new LibraryIndex({ Zotero: this.Zotero, files: this.files, eprintKey: this.eprintKey() })
 				.load(options.libraryID, { files: false });
-			for (const entry of entries) {
+			const steps = { place: serialized(), perItem: serializedByKey() };
+			// Entries are looked up and their PDFs downloaded in parallel; results
+			// are reported as they finish and returned in list order.
+			return await mapConcurrent(entries, NETWORK.concurrency, async (entry) => {
 				/** @type {ListResult} */
 				let result;
 				try {
-					result = await this.#addEntry(entry, options, index);
+					result = await this.#addEntry(entry, options, index, steps);
 				}
 				catch (e) {
 					this.log(`Adding "${entry.raw}" failed: ${e}\n${e.stack ?? ""}`);
 					result = { status: "failed", detail: String(e.message ?? e) };
 				}
 				onEntryDone(entry, result);
-				summary.push({ entry, result });
-			}
+				return { entry, result };
+			});
 		}
 		finally {
 			resume();
 		}
-		return summary;
 	}
 
-	/** @returns {Promise<ListResult>} */
-	async #addEntry(entry, options, index) {
+	/**
+	 * Looks the entry up (in parallel with other entries), then places it in the
+	 * library one entry at a time: the duplicate check and the creation of the
+	 * item must not overlap, or two entries naming the same paper (an ePrint id
+	 * and its title, say) would both create it.
+	 * @returns {Promise<ListResult>}
+	 */
+	async #addEntry(entry, options, index, { place, perItem }) {
 		const found = await this.#resolve(entry);
-		if (!found) {
-			return entry.doi
-				? this.#addByDOI(entry, options, index)
-				: /** @type {ListResult} */ ({ status: "not-found", detail: entry.raw });
+		const { work } = await place(() => this.#place(entry, found, options, index, perItem));
+		return work;
+	}
+
+	/**
+	 * Finds or creates the entry's item and queues its follow-up work (CryptoBib
+	 * update, ePrint PDF). The work is queued per item, and queued here, inside
+	 * the one-at-a-time step, so that two entries for the same paper never
+	 * download its PDF twice and the entry that created the item goes first.
+	 * @returns {Promise<{ work: Promise<ListResult> }>} wrapped, so that awaiting
+	 *   this step does not wait for the work itself
+	 */
+	async #place(entry, found, options, index, perItem) {
+		const notFound = () => ({ work: Promise.resolve(/** @type {ListResult} */ ({ status: "not-found", detail: entry.raw })) });
+		let item;
+		let source;
+		let isNew = false;
+		if (found) {
+			item = index.findReference(found.reference, found.eprintId);
+			if (!item) {
+				const context = { libraryID: options.libraryID, collectionID: options.collectionID, eprintKey: this.eprintKey() };
+				item = found.record
+					? await createItemFromRecord(this.Zotero, found.record, context)
+					: await createItemFromEprintPaper(this.Zotero, found.paper, context);
+				isNew = true;
+				source = found.source;
+			}
 		}
+		else if (entry.doi) {
+			// Zotero's DOI lookup saves the item itself, so the duplicate check follows afterwards.
+			const translated = await this.#translateDOI(entry.doi, options);
+			if (!translated) return notFound();
+			item = index.findPaper(translated);
+			if (item) {
+				await this.Zotero.Items.trashTx([translated.id]);
+			}
+			else {
+				item = translated;
+				isNew = true;
+				source = "DOI lookup";
+			}
+		}
+		else {
+			return notFound();
+		}
+		if (isNew) index.addPaper(item);
+		return {
+			work: perItem(item.id, () => (isNew ? this.#processNew(item, source, options) : this.#updateExisting(item, options))),
+		};
+	}
 
-		const existing = index.findReference(found.reference, found.eprintId);
-		if (existing) return this.#updateExisting(existing, options);
-
-		const context = { libraryID: options.libraryID, collectionID: options.collectionID, eprintKey: this.eprintKey() };
-		const item = found.record
-			? await createItemFromRecord(this.Zotero, found.record, context)
-			: await createItemFromEprintPaper(this.Zotero, found.paper, context);
-		index.addPaper(item);
+	/** A newly created item: CryptoBib update and ePrint PDF. */
+	async #processNew(item, source, options) {
 		const detail = await this.#runActions(item, [...options.metadataActions, ...options.eprintActions]);
-		return /** @type {ListResult} */ ({ status: "added", item, detail: [found.source, detail].filter(Boolean).join(" · ") });
+		return /** @type {ListResult} */ ({ status: "added", item, detail: [source, detail].filter(Boolean).join(" · ") });
 	}
 
 	/** An entry whose paper is already in the library: only its ePrint PDF may be missing. */
@@ -200,24 +247,6 @@ export class ListImporter {
 			this.log(`Cannot read the ePrint page of ${id}: ${e}`);
 			return null;
 		}
-	}
-
-	/**
-	 * Last resort for a DOI that CryptoBib does not have: Zotero's own lookup,
-	 * which saves the item itself, so the duplicate check follows afterwards.
-	 * @returns {Promise<ListResult>}
-	 */
-	async #addByDOI(entry, options, index) {
-		const item = await this.#translateDOI(entry.doi, options);
-		if (!item) return { status: "not-found", detail: entry.raw };
-		const existing = index.findPaper(item);
-		if (existing) {
-			await this.Zotero.Items.trashTx([item.id]);
-			return this.#updateExisting(existing, options);
-		}
-		index.addPaper(item);
-		const detail = await this.#runActions(item, [...options.metadataActions, ...options.eprintActions]);
-		return /** @type {ListResult} */ ({ status: "added", item, detail: ["DOI lookup", detail].filter(Boolean).join(" \u00b7 ") });
 	}
 
 	async #translateDOI(doi, options) {

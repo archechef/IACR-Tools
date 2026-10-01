@@ -344,3 +344,37 @@ test("the list import does not look at the library's files", async () => {
 	assert.equal(result.status, "added");
 	assert.equal(stats, 0);
 });
+
+test("entries are looked up in parallel, and a paper listed twice is added and downloaded once", async () => {
+	const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+	let inFlight = 0;
+	let maxInFlight = 0;
+	const { http } = env.importer;
+	const getDocument = http.getDocument.bind(http);
+	http.getDocument = async (url) => {
+		maxInFlight = Math.max(maxInFlight, ++inFlight);
+		await delay(10);
+		inFlight--;
+		return getDocument(url);
+	};
+	const { Attachments } = env.Zotero;
+	const importFromURL = Attachments.importFromURL.bind(Attachments);
+	Attachments.importFromURL = async (options) => {
+		await delay(10);
+		return importFromURL(options);
+	};
+
+	const entries = parseList("2008/045\nEPRINT:GHKR08\nEC:Bernstein08\nJC:LibYun20\nC:ZSELLR24\nACISP:GHMRS22");
+	const done = [];
+	const summary = await env.importer.run(entries, env.options(), { onEntryDone: (entry) => done.push(entry.raw) });
+
+	assert.deepEqual(summary.map(({ entry }) => entry.raw), entries.map((entry) => entry.raw), "results in list order");
+	assert.equal(done.length, entries.length);
+	assert.ok(maxInFlight > 1 && maxInFlight <= 4, `${maxInFlight} lookups at once`);
+
+	const twice = byRaw(summary);
+	const statuses = [twice["2008/045"].status, twice["EPRINT:GHKR08"].status].sort();
+	assert.deepEqual(statuses, ["added", "exists"]);
+	assert.equal(twice["2008/045"].item, twice["EPRINT:GHKR08"].item, "one item for both entries");
+	assert.equal(twice["2008/045"].item.attachments.length, 1, "its PDF is downloaded once");
+});

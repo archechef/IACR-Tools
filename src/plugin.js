@@ -1,7 +1,7 @@
 /**
  * The plugin: wires the services together and connects them to Zotero's UI.
  */
-import { ASSETS, LIST, PLUGIN } from "./config.js";
+import { ASSETS, LIST, NETWORK, PLUGIN } from "./config.js";
 import { eprintPageURL } from "./core/eprint.js";
 import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
@@ -174,6 +174,7 @@ export class IACRTools {
 			await this.#preloadCryptoBib(progress);
 			await this.pipeline.run(items, command.actions.map((name) => this.actions[name]), {
 				onItemDone: (item, results) => progress.itemDone(item, results),
+				concurrency: NETWORK.concurrency,
 			});
 			progress.finish();
 		}
