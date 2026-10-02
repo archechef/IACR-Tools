@@ -34,7 +34,7 @@ export class DoiPdfAction {
 	async #run(context) {
 		const { item } = context;
 		const parent = item.item;
-		if (this.#hasFullText(parent)) return result.unchanged("PDF already attached");
+		if (hasFullText(this.Zotero, parent)) return result.unchanged("PDF already attached");
 		const doi = item.doi;
 		if (!doi) return result.skipped("no DOI");
 		const eprintId = await this.eprintIdOf(context);
@@ -42,12 +42,6 @@ export class DoiPdfAction {
 		const attachment = await this.#fetch(parent);
 		if (!attachment) return result.unchanged("no PDF found via the DOI");
 		return result.changed(`${attachment.getField("title") || "PDF"} from ${hostOf(attachment.getField("url"))}`);
-	}
-
-	/** Whether the item already has a PDF or EPUB (Zotero's Find Full Text then does nothing either). */
-	#hasFullText(item) {
-		return this.Zotero.Items.get(item.getAttachments())
-			.some((attachment) => !attachment.deleted && (attachment.isPDFAttachment?.() || attachment.isEPUBAttachment?.()));
 	}
 
 	/**
@@ -66,6 +60,17 @@ export class DoiPdfAction {
 			}
 		});
 	}
+}
+
+/**
+ * Whether an item already has a PDF or EPUB (Zotero's Find Full Text then
+ * does nothing either).
+ * @param {any} Zotero
+ * @param {any} item  A regular Zotero item.
+ */
+export function hasFullText(Zotero, item) {
+	return Zotero.Items.get(item.getAttachments())
+		.some((attachment) => !attachment.deleted && (attachment.isPDFAttachment?.() || attachment.isEPUBAttachment?.()));
 }
 
 /** "link.springer.com" from a URL, or the URL itself. */

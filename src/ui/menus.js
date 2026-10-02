@@ -40,6 +40,11 @@ export const MENU_LAYOUT = Object.freeze([
 			{ command: "find-eprint" },
 			{ command: "download-eprint" },
 			{ command: "download-doi-pdf" },
+			{
+				id: "download-in-browser",
+				items: (plugin, context) => plugin.downloadInBrowser(context.items ?? []),
+				collection: async (plugin, context) => plugin.downloadInBrowser((await plugin.collectionPapers(context)).items),
+			},
 			{ command: "check-eprint-revisions" },
 			{
 				id: "open-eprint",

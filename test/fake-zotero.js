@@ -403,8 +403,17 @@ export function createFakeZotero({
 			},
 		},
 		Attachments: {
-			async importFromFile({ file, libraryID, collections: ids = [] }) {
-				return new FakeFileAttachment(registry, { path: await storeFile(file), libraryID, collections: ids });
+			/**
+			 * Mirrors Zotero.Attachments.importFromFile: a stored copy, standalone
+			 * or under `parentItemID` (not both with collections), renamed to
+			 * `fileBaseName` when given.
+			 */
+			async importFromFile({ file, libraryID, collections: ids = [], parentItemID, fileBaseName }) {
+				if (parentItemID && ids.length) throw new Error("parentItemID and collections cannot both be provided");
+				const stored = await storeFile(file);
+				const path = fileBaseName ? stored.replace(/[^/\\]+(\.[^.]+)$/, `${fileBaseName}$1`) : stored;
+				const parent = parentItemID ? registry.get(parentItemID) : null;
+				return new FakeFileAttachment(registry, { path, libraryID: parent?.libraryID ?? libraryID, collections: ids, parentItemID });
 			},
 			async linkFromFile({ file, collections: ids = [] }) {
 				return new FakeFileAttachment(registry, { path: file, linked: true, collections: ids });

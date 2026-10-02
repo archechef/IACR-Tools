@@ -94,6 +94,8 @@ export const PREFS = Object.freeze({
 	listMoveFilesWithZotMoov: { key: "listImport.moveFilesWithZotMoov", default: true },
 	/** List import: a paper without an ePrint version gets its PDF via the DOI (when PDFs are downloaded). */
 	listDownloadViaDoi: { key: "listImport.downloadViaDoi", default: true },
+	/** Download in the browser: the folder the browser saves to ("": the system's Downloads folder). */
+	browserDownloadFolder: { key: "browserDownload.folder", default: "" },
 	/** A revised ePrint PDF replaces the old one (moved to the trash) instead of being added next to it. */
 	replaceRevisedEprint: { key: "replaceRevisedEprint", default: false },
 	/** Papers looked up or downloaded at the same time (list import, menu commands). */
@@ -320,6 +322,30 @@ export const DOI_PDF = Object.freeze({
 	methods: Object.freeze(["doi", "oa", "custom"]),
 	/** Fetches run one at a time, at least this far apart (Zotero waits 1 s per domain). */
 	requestSpacingMs: 1000,
+});
+
+/**
+ * Downloading PDFs in the user's own browser, for publishers that turn away
+ * programs (the ACM Digital Library answers every non-browser request with a
+ * Cloudflare check, so neither the plugin nor Zotero's Find Full Text gets
+ * through). The plugin opens the links and attaches what lands in Downloads.
+ */
+export const BROWSER_DOWNLOAD = Object.freeze({
+	/** The link opened for a DOI: straight to the PDF where the publisher's URL is known, else the DOI's landing page. */
+	pdfURLs: Object.freeze([
+		Object.freeze({ prefix: "10.1145/", url: (doi) => `https://dl.acm.org/doi/pdf/${doi}` }),
+	]),
+	landingURL: (doi) => `https://doi.org/${doi}`,
+	/** Browser tabs open at once; the next one opens when a PDF has arrived. */
+	maxOpen: 5,
+	/** How often the Downloads folder is looked at. */
+	pollMs: 2000,
+	/** Waiting ends after this long without a new download. */
+	idleTimeoutMs: 15 * 60 * 1000,
+	/** A DOI suffix or title in a file name must be at least this long to identify a paper. */
+	minNameKeyLength: 8,
+	/** A file name holding only the start of a title must have at least this much of it (generic names such as "fulltext" must not match). */
+	minTitlePrefixLength: 20,
 });
 
 /** ZotMoov (another plugin) moves attachment files into a folder per collection. */

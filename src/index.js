@@ -20,6 +20,11 @@ function mergeItems(master, others) {
 	}
 }
 
+/** The system's Downloads folder (Firefox's own module, part of Zotero). */
+function downloadsDirectory() {
+	return ChromeUtils.importESModule("resource://gre/modules/Downloads.sys.mjs").Downloads.getSystemDownloadsDirectory();
+}
+
 Zotero[PLUGIN.globalName] = new IACRTools({
-	Zotero, Services, IOUtils, PathUtils, timers, rootURI, mergeItems, dialogs: createDialogs({ ChromeUtils, Services }),
+	Zotero, Services, IOUtils, PathUtils, timers, rootURI, mergeItems, downloadsDirectory, dialogs: createDialogs({ ChromeUtils, Services }),
 });

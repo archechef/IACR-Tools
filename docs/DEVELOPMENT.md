@@ -105,6 +105,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `eprint-page.js` | metadata and revision time from an ePrint paper page's meta tags |
 | `extra.js` | `Key: value` lines in Zotero's Extra field |
 | `pdf-text.js` | DOIs / ePrint ids in PDF text and file names; identifying a PDF in CryptoBib |
+| `downloads.js` | browser downloads: the link to open for a DOI, and which paper a downloaded file's name names |
 | `list.js`, `list-format.js` | reading lists: parse (including `[Section]` lines and collection paths) and write (flat, or with a section per subcollection) |
 | `duplicates.js` | grouping papers into copies and versions |
 | `concurrency.js` | `mapConcurrent` (bounded parallelism, stoppable), `serialized`, `serializedByKey` |
@@ -125,6 +126,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `list-import.js`, `list-export.js`, `folder-import.js` | the imports and the list export |
 | `collections.js` | `CollectionPaths`: collections by path below a base, created when missing (both imports) |
 | `doi-pdf.js` | `DoiPdfAction`: the PDF of a paper without an ePrint version through Zotero's Find Full Text, one request at a time |
+| `browser-download.js` | `BrowserDownloads`: opens PDF links in the user's browser and attaches the PDFs that appear in the Downloads folder |
 | `zotmoov.js` | asks ZotMoov to move the files of papers the list import moved between collections |
 | `latex.js` | `\cite` keys and the BibTeX export of papers CryptoBib lacks |
 | `duplicates.js` | `DuplicateFinder`: find groups, merge copies, merge a preprint into its published version, link versions, dismiss |
@@ -216,6 +218,8 @@ Verified while building the plugin, against Zotero 10.0.3's own source (`omni.ja
 - **Item basics**: `item.getField("year")`, `item.relatedItems` (keys), `item.addRelatedItem(other)` (false if already related; throws for an item in another library), `item.setType(typeID)` carries base-mapped fields over to the new type and clears the others (a preprint's `repository` becomes `publisher`, which `versions.js` prevents), `item.dateAdded` is `YYYY-MM-DD HH:MM:SS` in UTC.
 - **Collections**: `collection.getChildItems(asIDs)` (the items directly in it), `getChildCollections()`. Zotero's preference `recursiveCollections` (View → Show Items from Subcollections, off by default) only affects the display; the plugin's collection commands use its own preference `collectionsIncludeSubcollections` (`IACRTools.collectionPapers`).
 - **Collection membership**: `item.getCollections()` (ids of the collections the item is directly in), `item.addToCollection(id)` / `item.removeFromCollection(id)`, saved with `item.saveTx()`. `new Zotero.Collection({ name, libraryID, parentID })`; `Zotero.Collections.getByParent(id)` / `getByLibrary(libraryID)` (top level); a top-level collection's `parentID` is `false`.
+- **Attaching a file**: `Zotero.Attachments.importFromFile({ file, parentItemID, fileBaseName })` copies a file into storage under a parent (`parentItemID` and `collections` must not both be given); `fileBaseName` renames the copy. Zotero renames new files itself when `Zotero.Attachments.shouldAutoRenameFile(false, libraryID)` and `isRenameAllowedForType(contentType, libraryID)` hold, to `getFileBaseNameFromItem(parent)`.
+- **Downloads folder**: `ChromeUtils.importESModule("resource://gre/modules/Downloads.sys.mjs").Downloads.getSystemDownloadsDirectory()` (Firefox's module, shipped in Zotero's own `omni.ja`); passed to the plugin as `downloadsDirectory` from `src/index.js`. `Zotero.launchURL(url)` opens a link in the system's default browser.
 - **Find Full Text**: `Zotero.Attachments.addAvailableFile(item, { methods })` (Zotero 7+; `addAvailablePDF` is deprecated) tries resolvers in order — `doi` (the `https://doi.org/<DOI>` page, fetched with `Zotero.HTTP.request` and its redirects followed, so IP-based institutional access applies), `url` (the item's URL), `oa` (Unpaywall via `Zotero.Utilities.Internal.getOpenAccessPDFURLs`), `custom` (the JSON preference `extensions.zotero.findPDFs.resolvers`) — and returns the new attachment or `false`. It may show a CAPTCHA dialog. It does not throttle by itself: only the batch version `addAvailableFiles` (the context menu, with its own queue window) spaces requests to the same domain by 1 s. `canFindFileForItem` requires a DOI, URL or PMCID and no PDF/EPUB attachment.
 - **Export translators**: Zotero's BibTeX is `9cb70025-a888-4a29-a210-93ec52da40d4` and uses an item's `citationKey` field or a `Citation Key:` line in Extra when present; Better BibTeX is `ca65189f-8815-4afe-8c8b-8c7c15f0edca`, its pinned keys come from `Zotero.BetterBibTeX.KeyManager.get(itemID)?.citationKey`.
 
@@ -256,4 +260,6 @@ The GitHub Actions are pinned to commit hashes (with the version as a comment); 
 - **Automatic processing** skips synced items and batches of more than 100 items.
 - **Reorganizing with a list** only moves the papers the list names; nothing removes a paper the list leaves out. The ZotMoov hand-off depends on ZotMoov's internal methods (`move`, `getBasePrefs`) and does nothing if they change.
 - **List sections** are not read from BibTeX lists.
+- **The ACM Digital Library** (`dl.acm.org`) answers every non-browser request, including `doi.org` redirects to it, with HTTP 403 and a Cloudflare challenge page (`cf-mitigated: challenge`, checked October 2026). Only a person's browser gets through, hence the browser download. Matching its files relies on the file name (the DOI's suffix for ACM); a renamed download whose name says nothing is only matched when one link is open.
+- **Browser downloads** only see the folder they watch: a browser set to ask where to save, or to open PDFs without saving them, needs the user to save into that folder.
 - **Only an English locale** (`en-US`); another language is a new `.ftl` file under `addon/locale/<locale>/`.

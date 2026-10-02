@@ -410,6 +410,27 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	await listItem.onCommand(null, {});
 	assert.match(asked.at(-1).text, /list-confirm .*"count":1/, "fallback confirmation shown");
 
+	// Download Missing PDFs in Browser: only papers with a DOI, no PDF and no
+	// ePrint version; it says where it waits for the files before opening anything.
+	const acmPaper = env.Zotero.addItem("conferencePaper", { fields: { title: "An ACM Paper", DOI: "10.1145/3576915.3623096" } });
+	const withEprint = env.Zotero.addItem("conferencePaper", { fields: { title: "Has ePrint", DOI: "10.1145/1.1", extra: "IACR ePrint: 2008/045" } });
+	const withPdf = env.Zotero.addItem("conferencePaper", { fields: { title: "Has PDF", DOI: "10.1145/1.2" } });
+	env.Zotero.addPDF({ path: "/storage/has.pdf", parentItemID: withPdf.id });
+	assert.deepEqual(JSON.parse(JSON.stringify(plugin.papersMissingPdf([acmPaper, withEprint, withPdf]).map((p) => p.doi))), ["10.1145/3576915.3623096"]);
+	await plugin.downloadInBrowser([withEprint, withPdf]);
+	assert.match(asked.at(-1).text, /browser-nothing/);
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}browserDownload.folder`, join(dataDir, "no-such-folder"));
+	await plugin.downloadInBrowser([acmPaper]);
+	assert.match(asked.at(-1).text, /browser-no-folder .*no-such-folder/);
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}browserDownload.folder`, dataDir);
+	const confirmAll = plugin.dialogs.confirm;
+	plugin.dialogs.confirm = (window, options) => (asked.push(options), { confirmed: false });
+	const launched = env.Zotero.launched.length;
+	assert.equal(await plugin.downloadInBrowser([acmPaper]), null);
+	assert.match(asked.at(-1).text, /browser-confirm .*"count":1/);
+	assert.equal(env.Zotero.launched.length, launched, "nothing opened without a yes");
+	plugin.dialogs.confirm = confirmAll;
+
 	await vm.runInContext("shutdown({}, 1)", scope);
 	assert.equal(env.Zotero[PLUGIN.globalName], undefined);
 	assert.equal(env.registered.chrome[0].destructed, true, "chrome package unregistered");

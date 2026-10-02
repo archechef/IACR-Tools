@@ -302,6 +302,43 @@ export class ListProgress extends BatchProgress {
 }
 
 /**
+ * Progress of downloads in the browser: one row per paper (attached, or not
+ * downloaded in the end) and per file that could not be told apart.
+ */
+export class BrowserDownloadProgress extends BatchProgress {
+	/** @param {ProgressView} [view] */
+	constructor(Zotero, l10n, view) {
+		super(Zotero, l10n, "progress-download-in-browser", view);
+		this.counts = { attached: 0, missing: 0, unmatched: 0, failed: 0 };
+	}
+
+	attached(item, fileName) {
+		this.counts.attached++;
+		this.addRow({ itemType: item.itemType, title: item.getDisplayTitle(), status: this.l10n.format("browser-status-attached"), detail: fileName, kind: "ok" });
+	}
+
+	missing(item) {
+		this.counts.missing++;
+		this.addRow({ itemType: item.itemType, title: item.getDisplayTitle(), status: this.l10n.format("browser-status-missing"), kind: "error" });
+	}
+
+	failed(item, error) {
+		this.counts.failed++;
+		this.addRow({ itemType: item.itemType, title: item.getDisplayTitle(), status: this.l10n.format("browser-status-failed"), detail: String(error?.message ?? error), kind: "error" });
+	}
+
+	/** A file is not a paper, so it does not count towards the papers done. */
+	unmatched(fileName) {
+		this.counts.unmatched++;
+		this.view.row({ itemType: "attachmentPDF", title: fileName, status: this.l10n.format("browser-status-unmatched"), kind: "error" });
+	}
+
+	finish() {
+		super.finish("browser-summary", this.counts);
+	}
+}
+
+/**
  * Progress of a folder import: one row per file and a summary of the outcomes.
  */
 export class FolderImportProgress extends BatchProgress {

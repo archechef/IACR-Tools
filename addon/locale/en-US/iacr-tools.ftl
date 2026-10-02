@@ -20,6 +20,8 @@ iacr-tools-menu-download-eprint =
     .label = Download ePrint PDF
 iacr-tools-menu-download-doi-pdf =
     .label = Download PDF via DOI (Papers Without ePrint Version)
+iacr-tools-menu-download-in-browser =
+    .label = Download Missing PDFs in Browser…
 iacr-tools-menu-check-eprint-revisions =
     .label = Check for Revised PDF
 iacr-tools-menu-open-eprint =
@@ -66,6 +68,7 @@ iacr-tools-progress-sync-cryptobib = Updating metadata from CryptoBib
 iacr-tools-progress-find-eprint = Finding ePrint versions
 iacr-tools-progress-download-eprint = Downloading ePrint PDFs
 iacr-tools-progress-download-doi-pdf = Downloading PDFs via the DOI
+iacr-tools-progress-download-in-browser = Downloading PDFs in your browser
 iacr-tools-progress-check-eprint-revisions = Checking for revised ePrint versions
 iacr-tools-progress-upgrade-preprints = Updating preprints to published versions
 iacr-tools-progress-link-versions = Linking ePrint and published versions
@@ -340,6 +343,33 @@ iacr-tools-pref-list-download =
     .label = Download the ePrint PDF of each paper added from a list
 iacr-tools-pref-list-doi-pdf =
     .label = When downloading, fetch the PDF via the DOI for papers without an ePrint version
+
+iacr-tools-pref-browser-heading = Download Missing PDFs in Browser
+iacr-tools-pref-browser-description = For publishers that only let web browsers in, such as the ACM Digital Library: the plugin opens the papers' PDF links in your browser and attaches the PDFs you save to this folder.
+iacr-tools-pref-browser-folder = Folder your browser saves downloads to (empty: your Downloads folder):
+
+## Downloading in the browser
+
+iacr-tools-browser-title = Download Missing PDFs in Browser
+iacr-tools-browser-nothing = None of these papers is missing a PDF that the browser could fetch: this is for papers with a DOI but no PDF and no ePrint version. (Papers with an ePrint version get their PDF with Download ePrint PDF.)
+iacr-tools-browser-no-folder = The folder your browser saves downloads to was not found{ $folder ->
+        [none] {""}
+       *[other] {" "}({ $folder })
+    }. Set it in Settings → IACR Tools → Download Missing PDFs in Browser.
+iacr-tools-browser-confirm = Open the PDF links of { $count ->
+        [one] one paper
+       *[other] { $count } papers
+    } in your web browser, { $tabs } at a time? Save each PDF there as you normally would, to { $folder }. While the progress window is open, every new PDF in that folder is attached to its paper and the next link opens; Stop ends the waiting.
+iacr-tools-browser-accept = Open in Browser
+iacr-tools-browser-waiting = Waiting for { $count ->
+        [one] one PDF
+       *[other] { $count } PDFs
+    } in { $folder }. Save each PDF from your browser.
+iacr-tools-browser-status-attached = PDF attached
+iacr-tools-browser-status-missing = not downloaded
+iacr-tools-browser-status-failed = could not be attached
+iacr-tools-browser-status-unmatched = not matched to a paper; drag it onto its paper
+iacr-tools-browser-summary = { $attached } attached, { $missing } not downloaded, { $unmatched } files not matched, { $failed } failed
 iacr-tools-pref-list-reorganize =
     .label = Move papers already in the selected collection into the subcollections the list names
 iacr-tools-pref-list-zotmoov =

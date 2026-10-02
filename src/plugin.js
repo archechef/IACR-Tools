@@ -1,12 +1,13 @@
 /**
  * The plugin: wires the services together and connects them to Zotero's UI.
  */
-import { ASSETS, chromeURL, LATEX, LIST, NETWORK, PLUGIN, PREFS } from "./config.js";
+import { ASSETS, BROWSER_DOWNLOAD, chromeURL, LATEX, LIST, NETWORK, PLUGIN, PREFS } from "./config.js";
 import { eprintPageURL } from "./core/eprint.js";
 import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
 import { createCryptoBibSyncAction } from "./zotero/cryptobib-sync.js";
-import { DoiPdfAction } from "./zotero/doi-pdf.js";
+import { BrowserDownloads } from "./zotero/browser-download.js";
+import { DoiPdfAction, hasFullText } from "./zotero/doi-pdf.js";
 import { EprintActions, storedEprintId } from "./zotero/eprint.js";
 import { FolderImporter } from "./zotero/folder-import.js";
 import { ListImporter } from "./zotero/list-import.js";
@@ -27,7 +28,7 @@ import { registerEprintColumn, unregisterEprintColumn } from "./ui/column.js";
 import { L10n } from "./ui/l10n.js";
 import { registerMenus, unregisterMenus } from "./ui/menus.js";
 import { DuplicatesView } from "./ui/duplicates.js";
-import { BatchProgress, DialogView, FolderImportProgress, ListProgress, ToastView } from "./ui/progress.js";
+import { BatchProgress, BrowserDownloadProgress, DialogView, FolderImportProgress, ListProgress, ToastView } from "./ui/progress.js";
 import { resolveImportTarget } from "./ui/target.js";
 
 /**
@@ -75,9 +76,15 @@ export class IACRTools {
 	 * @param {string} env.rootURI
 	 * @param {import("./ui/dialogs.js").Dialogs} env.dialogs
 	 * @param {(master: any, others: any[]) => Promise<void>} [env.mergeItems]  Zotero's item merge.
+	 * @param {() => Promise<string>} [env.downloadsDirectory]  The system's Downloads folder.
 	 */
-	constructor({ Zotero, Services, IOUtils, PathUtils, timers, rootURI, dialogs, mergeItems = (master, others) => Zotero.Items.merge(master, others) }) {
+	constructor({
+		Zotero, Services, IOUtils, PathUtils, timers, rootURI, dialogs,
+		mergeItems = (master, others) => Zotero.Items.merge(master, others),
+		downloadsDirectory = async () => "",
+	}) {
 		this.Zotero = Zotero;
+		this.downloadsDirectory = downloadsDirectory;
 		this.dialogs = dialogs;
 		this.rootURI = rootURI;
 		this.log = (msg) => Zotero.debug(`${PLUGIN.name}: ${msg}`);
@@ -147,6 +154,7 @@ export class IACRTools {
 			log: this.log,
 		});
 		this.zotmoov = new ZotMoovFiles({ Zotero, log: this.log });
+		this.browserDownloads = new BrowserDownloads({ Zotero, files, timers, openURL: (url) => Zotero.launchURL(url), log: this.log });
 		this.folderImporter = new FolderImporter({
 			Zotero,
 			files,
@@ -714,6 +722,87 @@ export class IACRTools {
 			this.dialogs.alert(target.window, title, l10n.format("dup-no-window", { groups: report.groups.length }));
 		}
 		return view;
+	}
+
+	/**
+	 * IACR → ePrint & PDFs → Download Missing PDFs in Browser…: for papers that
+	 * have a DOI but neither a PDF nor an ePrint version, opens their PDF links
+	 * in the user's browser and attaches the PDFs saved to the Downloads folder
+	 * while the progress window is open. For publishers such as ACM, whose
+	 * site only lets browsers in.
+	 * @param {any[]} items
+	 */
+	async downloadInBrowser(items) {
+		const { Zotero, l10n, prefs } = this;
+		const window = Zotero.getMainWindow();
+		const title = l10n.format("browser-title");
+		const papers = this.papersMissingPdf(items ?? []);
+		if (!papers.length) {
+			this.dialogs.alert(window, title, l10n.format("browser-nothing"));
+			return null;
+		}
+		const folder = await this.#browserDownloadFolder();
+		if (!folder) {
+			this.dialogs.alert(window, title, l10n.format("browser-no-folder", { folder: String(prefs.get("browserDownloadFolder") || "").trim() || "none" }));
+			return null;
+		}
+		const answer = this.dialogs.confirm(window, {
+			title,
+			text: l10n.format("browser-confirm", { count: papers.length, folder, tabs: BROWSER_DOWNLOAD.maxOpen }),
+			accept: l10n.format("browser-accept"),
+		});
+		if (!answer.confirmed) return null;
+
+		const progress = this.#openProgress((view) => new BrowserDownloadProgress(Zotero, l10n, view));
+		progress.setTotal(papers.length);
+		try {
+			const outcome = await this.browserDownloads.run(papers, folder, {
+				onAttached: (paper, fileName) => progress.attached(paper.item, fileName),
+				onUnmatched: (fileName) => progress.unmatched(fileName),
+				onFailed: (paper, error) => progress.failed(paper.item, error),
+				onWaiting: (count) => progress.status("browser-waiting", { count, folder }),
+				shouldStop: () => progress.stopRequested,
+			});
+			for (const paper of outcome.missing) progress.missing(paper.item);
+			progress.finish();
+			return outcome;
+		}
+		catch (e) {
+			this.log(`Downloading in the browser failed: ${e}\n${e.stack ?? ""}`);
+			progress.fail(e);
+			return null;
+		}
+	}
+
+	/**
+	 * Papers with a DOI, no PDF and no recorded ePrint version (those get the
+	 * ePrint PDF instead).
+	 * @param {any[]} items
+	 * @returns {import("./zotero/browser-download.js").BrowserPaper[]}
+	 */
+	papersMissingPdf(items) {
+		const papers = [];
+		for (const item of items) {
+			if (!item?.isRegularItem?.() || item.deleted || hasFullText(this.Zotero, item)) continue;
+			const wrapper = new ItemWrapper(item, this.Zotero);
+			const doi = wrapper.doi;
+			if (!doi || this.eprintIdOf(item)) continue;
+			papers.push({ item, doi, title: wrapper.getField("title") });
+		}
+		return papers;
+	}
+
+	/** The folder the browser saves to: the preference, else the system's Downloads folder; null if missing. */
+	async #browserDownloadFolder() {
+		let folder = String(this.prefs.get("browserDownloadFolder") || "").trim();
+		try {
+			folder ||= await this.downloadsDirectory();
+			return folder && (await this.files.exists(folder)) ? folder : null;
+		}
+		catch (e) {
+			this.log(`No Downloads folder: ${e}`);
+			return null;
+		}
 	}
 
 	/** The clipboard as text, if it holds any. */

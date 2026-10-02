@@ -2,6 +2,10 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **Download Missing PDFs in Browser…** (IACR → ePrint & PDFs) for publishers that only let browsers in, such as the ACM Digital Library, which turns away the plugin and Zotero's Find Full Text alike: the papers' PDF links open in your browser, five at a time, and every PDF you save to your Downloads folder is attached to its paper (matched by the DOI or title in its file name) while the progress window is open. The folder can be set in the preferences.
+
 ## 1.6.0 — 2026-10-02
 
 - Commands on a collection (Update All, metadata, ePrint & PDFs, version links, LaTeX, BibTeX export, duplicates) now apply to the papers in its subcollections too, at any depth. Until now they followed Zotero's *View → Show Items from Subcollections*, which is off by default, so subcollections were left out unnoticed. A preference (Running Commands) restores the old scope; Copy Papers as List follows it too.
