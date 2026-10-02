@@ -48,10 +48,11 @@ export function itemsAsList(Zotero, items, { eprintKey, header }) {
  * rebuilds the structure. A paper in two subcollections is listed in both.
  * @param {any} Zotero
  * @param {any} collection
- * @param {{ eprintKey: string, header?: string }} options
+ * @param {{ eprintKey: string, header?: string, subcollections?: boolean }} options
+ *   subcollections: false lists only the collection's own papers.
  * @returns {{ text: string, count: number }} count: different papers listed
  */
-export function collectionAsList(Zotero, collection, { eprintKey, header }) {
+export function collectionAsList(Zotero, collection, { eprintKey, header, subcollections = true }) {
 	const sections = [];
 	const listed = new Set();
 	let lines = 0;
@@ -64,6 +65,7 @@ export function collectionAsList(Zotero, collection, { eprintKey, header }) {
 		lines += papers.length;
 		for (const item of items) listed.add(item.id);
 		sections.push({ path, papers });
+		if (!subcollections) return;
 		const children = current.getChildCollections(false).filter((child) => !child.deleted)
 			.sort((a, b) => a.name.localeCompare(b.name));
 		for (const child of children) visit(child, [...path, child.name]);

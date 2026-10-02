@@ -318,6 +318,8 @@ iacr-tools-pref-general-heading = Running Commands
 iacr-tools-pref-concurrency = Papers fetched at the same time (1–8):
 iacr-tools-pref-progress-window =
     .label = Show the progress of imports and commands in a window of their own
+iacr-tools-pref-collections-recursive =
+    .label = Commands on a collection also apply to the papers in its subcollections
 
 iacr-tools-pref-import-heading = Import PDFs from Folder
 iacr-tools-pref-import-description = File → Import PDFs from Folder… (or right-click a collection) imports the PDFs of a folder and its subfolders that are not in the library yet. New items are converted and updated from CryptoBib according to the settings above.

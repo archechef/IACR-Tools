@@ -533,6 +533,7 @@ export class IACRTools {
 			return this.copyAsList(items, name);
 		}
 		const { text, count } = collectionAsList(this.Zotero, collection, {
+			subcollections: Boolean(this.prefs.get("collectionsIncludeSubcollections")),
 			eprintKey: String(this.prefs.get("eprintExtraKey")),
 			header: this.l10n.format("copy-header", { source: collection.name }),
 		});
@@ -541,9 +542,11 @@ export class IACRTools {
 
 	/**
 	 * The papers a collection menu command applies to: those of the collection
-	 * (with its subcollections when Zotero shows their items, View → Show Items
-	 * from Subcollections), or of the whole library when a library was
-	 * right-clicked.
+	 * and, by default, of all its subcollections (the plugin's own preference:
+	 * Zotero's View → Show Items from Subcollections is a display choice and off
+	 * by default, which left subcollections out unnoticed), or of the whole
+	 * library when a library was right-clicked. Every collection command (paper
+	 * commands, LaTeX, BibTeX export, duplicates) goes through here.
 	 * @returns {Promise<{ items: any[], name: string, isLibrary: boolean, window: any }>}
 	 */
 	async collectionPapers(context) {
@@ -554,7 +557,7 @@ export class IACRTools {
 			const items = regular(await Zotero.Items.getAll(libraryID, true, false));
 			return { items, name: Zotero.Libraries.get(libraryID)?.name ?? "", isLibrary: true, window };
 		}
-		const recursive = Boolean(Zotero.Prefs.get("recursiveCollections"));
+		const recursive = Boolean(this.prefs.get("collectionsIncludeSubcollections"));
 		const ids = new Set();
 		const visit = (current) => {
 			for (const id of current.getChildItems(true)) ids.add(id);

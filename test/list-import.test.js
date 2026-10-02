@@ -553,6 +553,10 @@ test("a collection is copied as a list with a section per subcollection, which i
 	].join("\n"), "empty subcollections are left out");
 	assert.equal(count, 2, "a paper in two sections counts once");
 
+	const own = collectionAsList(env.Zotero, project, { eprintKey: "IACR ePrint", subcollections: false });
+	assert.equal(own.text, "10.1007/978-3-540-78967-3_5       # Proving Tight Security for Rabin-Williams Signatures\n", "without subcollections: no sections");
+	assert.equal(own.count, 1);
+
 	// Imported into a fresh collection, the list rebuilds the structure.
 	const copy = await make("Copy");
 	const results = await env.importer.run(parseList(text), env.options({ collectionID: copy.id, eprintActions: [] }));

@@ -109,7 +109,7 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
 
 ## Usage
 
-Right-click papers, or a collection, → **IACR**. On papers the commands apply to the selection; on a collection to all its papers (including its subcollections when **View → Show Items from Subcollections** is on); on a library (e.g. My Library) to all its papers, after a confirmation.
+Right-click papers, or a collection, → **IACR**. On papers the commands apply to the selection; on a collection to all its papers, including those in its subcollections at any depth (a preference; Zotero's **View → Show Items from Subcollections** does not matter); on a library (e.g. My Library) to all its papers, after a confirmation.
 
 - **Update All**: converts Springer chapters, turns published preprints into the published paper, updates from CryptoBib, finds the ePrint version and links versions. It downloads nothing.
 - **Metadata**
@@ -168,6 +168,7 @@ never defines a paper twice.
 | A revised ePrint PDF replaces the old one (otherwise both are kept) | off |
 | Papers fetched at the same time (1–8) | 4 |
 | Progress of imports and commands in a window of their own | on |
+| Commands on a collection also apply to the papers in its subcollections (also Copy Papers as List's sections) | on |
 | Folder import: collections for folders, link instead of copy, add PDF to existing item | on, off, on |
 | Folder import: look up ePrint versions / download ePrint PDFs | on / off |
 | List import: download the ePrint PDF of each paper | on |

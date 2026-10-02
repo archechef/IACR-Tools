@@ -362,6 +362,24 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(collectionRun.headline, `${PLUGIN.l10nPrefix}-progress-sync-cryptobib`);
 	assert.deepEqual([collectionRun.total, collectionRun.done], [inCollection.length, inCollection.length]);
 
+	// Papers in subcollections (at any depth) count by default, whatever Zotero's
+	// View → Show Items from Subcollections says; a preference turns that off.
+	const topic = new env.Zotero.Collection({ libraryID: 1, name: "Topic", parentID: target.id });
+	await topic.saveTx();
+	const subtopic = new env.Zotero.Collection({ libraryID: 1, name: "Subtopic", parentID: topic.id });
+	await subtopic.saveTx();
+	const nested = env.Zotero.addItem("journalArticle", { fields: { title: "A Paper Two Levels Down" } });
+	nested.addToCollection(subtopic.id);
+	const targetRow = { collectionTreeRow: { isCollection: () => true, ref: target } };
+	env.Zotero.Prefs.set("recursiveCollections", false);
+	const withSubcollections = (await plugin.collectionPapers(targetRow)).items;
+	assert.deepEqual(withSubcollections.map((item) => item.id), [...inCollection, nested].map((item) => item.id));
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}collectionsIncludeSubcollections`, false);
+	env.Zotero.Prefs.set("recursiveCollections", true);
+	assert.deepEqual((await plugin.collectionPapers(targetRow)).items.map((item) => item.id), inCollection.map((item) => item.id),
+		"only the collection's own papers, even when Zotero shows subcollection items");
+	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}collectionsIncludeSubcollections`, true);
+
 	// On a library (right-clicked, so no collection is selected) it covers all
 	// papers of the library, after a confirmation.
 	const paneWindow = env.Zotero.getMainWindow;

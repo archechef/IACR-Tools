@@ -100,6 +100,11 @@ export const PREFS = Object.freeze({
 	concurrency: { key: "concurrency", default: 4 },
 	/** Long runs report in a window of their own; off: Zotero's small pop-up. */
 	progressWindow: { key: "progressWindow", default: true },
+	/**
+	 * Commands on a collection also apply to the papers of its subcollections
+	 * (at any depth), whatever Zotero's View → Show Items from Subcollections says.
+	 */
+	collectionsIncludeSubcollections: { key: "collectionsIncludeSubcollections", default: true },
 	/** Duplicate groups marked "not the same paper" (JSON list of group signatures). */
 	duplicatesDismissed: { key: "duplicates.dismissed", default: "[]" },
 });
