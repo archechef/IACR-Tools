@@ -27,9 +27,9 @@ Zotero checks for updates on its own once the plugin is installed.
 
 ## Adding papers from a list
 
-**File → Add Papers from a List…** (or right-click a collection) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the ePrint PDFs are downloaded. (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
+**File → Add Papers from a List…** (or right-click a collection → **IACR → Add Papers → From a List…**) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the ePrint PDFs are downloaded. (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
 
-The other direction is **IACR → Copy as List** in the right-click menu of the selected items, and **IACR → Copy Papers as List** in the right-click menu of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back. A collection is copied with a section per subcollection (see below), so importing the list rebuilds the structure.
+The other direction is **IACR → Copy & Export → Copy as List**, in the right-click menu of the selected items or of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back. A collection is copied with a section per subcollection (see below), so importing the list rebuilds the structure.
 
 One entry per line; everything after `#` is ignored:
 
@@ -81,7 +81,7 @@ JC:LibYun20
 
 ## Importing a folder of PDFs
 
-**File → Import PDFs from Folder…** (or right-click a collection) asks for a folder, scans it and its subfolders, and shows what it found before changing anything.
+**File → Import PDFs from Folder…** (or right-click a collection → **IACR → Add Papers → From a Folder of PDFs…**) asks for a folder, scans it and its subfolders, and shows what it found before changing anything.
 
 1. **Files already in the library are skipped.** A PDF counts as known when a library attachment has the same path (linked files) or the same content (MD5, also compared with the hashes of synced files that are not downloaded). Identical copies within the folder are imported once.
 2. **Each remaining PDF is imported and identified.** Zotero's "Retrieve Metadata for PDF" runs first. When it finds nothing, the plugin reads the file name and first pages: a DOI or ePrint id (e.g. `2008-045.pdf`) that CryptoBib knows is used, provided the paper's title appears in the text (so that cited DOIs are not mistaken for the paper's own). PDFs that cannot be identified stay as standalone attachments.
@@ -97,21 +97,28 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
 
 ## Usage
 
-- Right-click items → **IACR**:
-  - Convert Springer Chapters to Conference Papers
-  - Update Metadata from CryptoBib
-  - Find ePrint Version
-  - Find and Download ePrint PDF
-  - Check for Revised ePrint Versions: when the ePrint page was revised after the attached PDF, the new PDF is added and the old one keeps its date in its title (or goes to the trash, see the preferences). An identical download is discarded.
-  - Update Preprints to Published Versions: a preprint that CryptoBib lists as published gets the published metadata and type; its ePrint id stays in Extra and its PDF stays attached. If the published version is already in the library, the two are linked instead.
-  - Link ePrint and Published Versions: marks the two versions of a paper as related items (by shared ePrint id, or by title and authors).
-  - Do All of the Above (Except Downloads): convert, update preprints, update from CryptoBib, find the ePrint version, link versions.
-  - Copy as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib…
-  - Find Other Copies and Versions…: the duplicate report (below) for the selected papers
-  - Open ePrint Page
+Right-click papers, or a collection, → **IACR**. On papers the commands apply to the selection; on a collection to all its papers (including its subcollections when **View → Show Items from Subcollections** is on); on a library (e.g. My Library) to all its papers, after a confirmation.
+
+- **Update All**: converts Springer chapters, turns published preprints into the published paper, updates from CryptoBib, finds the ePrint version and links versions. It downloads nothing.
+- **Metadata**
+  - **Update from CryptoBib**
+  - **Springer Chapter → Conference Paper**
+  - **Preprint → Published Version**: a preprint that CryptoBib lists as published gets the published metadata and type; its ePrint id stays in Extra and its PDF stays attached. If the published version is already in the library, the two are linked instead.
+- **ePrint**
+  - **Find ePrint Version**: stores the id in Extra.
+  - **Download ePrint PDF**: finds the version first if needed.
+  - **Check for Revised PDF**: when the ePrint page was revised after the attached PDF, the new PDF is added and the old one keeps its date in its title (or goes to the trash, see the preferences). An identical download is discarded.
+  - **Open ePrint Page** (papers only)
+- **Duplicates & Versions**
+  - **Find Duplicates…**: the duplicate report (below) for these papers.
+  - **Link ePrint and Published Versions**: marks the two versions of a paper as related items (by shared ePrint id, or by title and authors).
+- **Copy & Export**: **Copy as List**, **Copy LaTeX Citation**, **Export BibTeX (Not in CryptoBib)…**
+- **Add Papers** (collections only): **From a List…**, **From a Folder of PDFs…**, into this collection.
+
+Elsewhere:
+
 - **Tools → Update CryptoBib Database**: fetches the latest export.
 - **Tools → Find Duplicate Papers…**: the duplicate report for the library.
-- Right-click a collection → **IACR**: the same commands for all papers of the collection (including its subcollections when **View → Show Items from Subcollections** is on), plus Copy Papers as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib… and Find Duplicate Papers…. Right-click a library (e.g. My Library) to run them on all its papers, after a confirmation.
 - Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
 - **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted, updated from CryptoBib and linked with their other version in the library automatically. ePrint lookup and download, and turning published preprints into the published paper, can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
@@ -125,7 +132,7 @@ Each group is a card. Copies of one publication (same type, or the same DOI, e.g
 
 ## LaTeX with CryptoBib
 
-If you cite from CryptoBib's `crypto.bib`, **Copy LaTeX Citation** puts `\cite{EC:Bernstein08,…}` on the clipboard: papers CryptoBib has are cited by their CryptoBib key, the others by the key of your BibTeX export (Better BibTeX's pinned key when it is installed, else the item's citation key). **Export BibTeX of Papers Not in CryptoBib…** (also on collections) writes just those other papers to a file, e.g. `my-paper-not-in-cryptobib.bib`, so that
+If you cite from CryptoBib's `crypto.bib`, **Copy LaTeX Citation** puts `\cite{EC:Bernstein08,…}` on the clipboard: papers CryptoBib has are cited by their CryptoBib key, the others by the key of your BibTeX export (Better BibTeX's pinned key when it is installed, else the item's citation key). **Copy & Export → Export BibTeX (Not in CryptoBib)…** (also on collections) writes just those other papers to a file, e.g. `my-paper-not-in-cryptobib.bib`, so that
 
 ```latex
 \bibliography{abbrev0,crypto,my-paper-not-in-cryptobib}

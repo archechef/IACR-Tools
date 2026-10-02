@@ -189,7 +189,9 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", bookTitle: "EUROCRYPT 2008", date: "2008", extra: "DOI: 10.1007/978-3-540-78967-3_6" },
 		creators: [{ firstName: "R.", lastName: "Gennaro", creatorType: "author" }],
 	});
-	const submenu = env.registered.menus[0].menus[0].menus;
+	// The IACR submenu nests its groups; tests look entries up across all of them.
+	const flatten = (menus) => menus.flatMap((m) => [m, ...flatten(m.menus ?? [])]);
+	const submenu = flatten(env.registered.menus[0].menus[0].menus);
 	const command = (id) => submenu.find((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`);
 	env.registered.closeDialogs = true;
 	await command("process-all").onCommand(null, { items: [item] });
@@ -319,8 +321,10 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	const toolsMenu = env.registered.menus.find((m) => m.target === "main/menubar/tools");
 	const findInLibrary = toolsMenu.menus.find((m) => m.l10nID?.endsWith("menu-find-library-duplicates"));
 	const collectionMenu = env.registered.menus.find((m) => m.target === "main/library/collection");
-	const collectionSubmenu = collectionMenu.menus.find((m) => m.menuType === "submenu").menus;
-	assert.ok(collectionSubmenu.some((m) => m.l10nID?.endsWith("menu-find-collection-duplicates")));
+	assert.equal(JSON.stringify(collectionMenu.menus.map((m) => m.l10nID)), JSON.stringify([`${PLUGIN.l10nPrefix}-menu-root`]), "only the IACR submenu at the top");
+	const collectionSubmenu = flatten(collectionMenu.menus[0].menus);
+	assert.ok(collectionSubmenu.some((m) => m.l10nID?.endsWith("menu-find-duplicates")));
+	assert.ok(!collectionSubmenu.some((m) => m.l10nID?.endsWith("menu-open-eprint")), "no tab per paper of a collection");
 	assert.ok(submenu.some((m) => m.l10nID?.endsWith("menu-find-duplicates")));
 	const copyOfPaper = env.Zotero.addItem("bookSection", {
 		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", date: "2008", extra: "DOI: 10.1007/978-3-540-78967-3_6" },
@@ -338,7 +342,16 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	for (const { id } of plugin.commands) {
 		assert.ok(collectionSubmenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `collection command ${id}`);
 	}
-	for (const id of ["copy-collection-list", "copy-latex", "export-collection-bibtex"]) {
+	// Every command is in both IACR menus, and every menu entry has a label in the locale file.
+	for (const { id } of plugin.commands) {
+		assert.ok(submenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `item menu lacks ${id}`);
+	}
+	const ftl = readFileSync(new URL("locale/en-US/iacr-tools.ftl", addonDir), "utf8");
+	const labelled = new Set([...ftl.matchAll(/^([a-z0-9-]+) =\n\s+\.label =/gm)].map((m) => m[1]));
+	for (const entry of flatten(env.registered.menus.flatMap((m) => m.menus))) {
+		if (entry.menuType !== "separator") assert.ok(labelled.has(entry.l10nID), `no label for ${entry.l10nID}`);
+	}
+	for (const id of ["copy-list", "copy-latex", "export-bibtex", "add-list-here", "import-folder-here"]) {
 		assert.ok(collectionSubmenu.some((m) => m.l10nID === `${PLUGIN.l10nPrefix}-menu-${id}`), `collection entry ${id}`);
 	}
 	const inCollection = (await plugin.collectionPapers({ collectionTreeRow: { isCollection: () => true, ref: target } })).items;

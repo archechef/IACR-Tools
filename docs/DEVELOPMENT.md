@@ -60,7 +60,7 @@ types/      globals of the bootstrap scope for the type checker
 
 Most features are **actions**: `{ id, run(context) }` objects that edit one item and return a result (`result.changed / unchanged / skipped / failed(detail)` from [pipeline.js](../src/zotero/pipeline.js)).
 
-- A **command** ([`COMMANDS` in plugin.js](../src/plugin.js)) is a list of action names. Each command appears automatically in the IACR submenu of items *and* of collections; its Fluent ids are `menu-<id>` and `progress-<id>`.
+- A **command** ([`COMMANDS` in plugin.js](../src/plugin.js)) is a list of action names. Where it appears is set by `MENU_LAYOUT` in [ui/menus.js](../src/ui/menus.js): the one layout of the IACR submenu (Update All, then the groups Metadata, ePrint, Duplicates & Versions, Copy & Export, and Add Papers on collections), used for items *and* collections. Its Fluent ids are `menu-<id>` and `progress-<id>`; groups use `menu-group-<group>`.
 - The **pipeline** runs a command's actions over many items: the actions of one item in order, several items in parallel (`concurrency`, from the preference), each item by one task only. It skips non-regular items and read-only libraries, and can be stopped (`shouldStop`).
 - Each item gets an **`ItemContext`**: `context.item` (an `ItemWrapper`), `context.store` (CryptoBib), `context.memo(key, fn)` for lookups shared by the actions of that item (e.g. the CryptoBib match, the ePrint id), and `context.library()`: the library's papers (`LibraryIndex`), loaded once per pipeline run.
 - **Automatic processing** ([auto-processor.js](../src/zotero/auto-processor.js)) runs the actions enabled in the preferences (`AUTO_ACTIONS` in plugin.js) on newly added items, after a short debounce. It skips synced items and batches of more than 100, and is suspended while the imports add items themselves.
@@ -133,7 +133,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 
 | File | Purpose |
 |---|---|
-| `menus.js` | all menus (item and collection IACR submenus, File, Tools) via `Zotero.MenuManager` |
+| `menus.js` | all menus via `Zotero.MenuManager`; `MENU_LAYOUT` defines the IACR submenu shared by items and collections (entries per scope), plus File and Tools |
 | `progress.js` | progress reporters (`BatchProgress`, `ListProgress`, `FolderImportProgress`) and views (`DialogView`, `ToastView`) |
 | `duplicates.js` | `DuplicatesView`, the state and actions behind the report window |
 | `dialogs.js` | native dialogs: file / folder pickers, confirm, alert, the paste box |
@@ -183,7 +183,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 
 1. Write the action (`{ id, async run(context) }` returning `result.*`), usually in `src/zotero/`.
 2. Register it in `this.actions` in `IACRTools`'s constructor.
-3. Add a command to `COMMANDS` (id and action names). It then appears in the item *and* collection IACR submenus.
+3. Add a command to `COMMANDS` (id and action names) and place it in a group of `MENU_LAYOUT` in `src/ui/menus.js`; it then appears in the item *and* collection IACR submenus. The bundle test fails if a command is missing from the layout or a menu entry has no label.
 4. Add `iacr-tools-menu-<id>` (with `.label`) and `iacr-tools-progress-<id>` to the `.ftl` file.
 5. Optionally run it on new items: a preference in `PREFS` and an entry in `AUTO_ACTIONS`.
 6. Test it with the pipeline (`versions.test.js` shows the pattern), and mention it in the README.

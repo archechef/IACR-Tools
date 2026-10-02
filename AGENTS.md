@@ -18,7 +18,7 @@ A change is done when `check`, `build` and `test` pass, the README describes any
 - Constants (names, ids, URLs, preference keys and defaults, patterns, thresholds) belong in `src/config.js`. Files in `addon/` are templates: use `__PLACEHOLDERS__` (list in `scripts/build.mjs`), never hard-code `iacr-tools` / `IACRTools` there.
 - `src/core` is pure: no Zotero, network or file access. `src/zotero` and `src/ui` receive `Zotero`, `http`, `files`, `prefs`, `timers`, `log` through constructors; do not use globals.
 - Edit items through `ItemWrapper` (`src/zotero/item.js`); compare papers through `bestMatch` / `scoreCandidate` (`src/core/matching.js`).
-- New per-item features are pipeline actions; adding one to `COMMANDS` in `src/plugin.js` puts it in the item and the collection IACR menus (Fluent ids `menu-<id>`, `progress-<id>`).
+- New per-item features are pipeline actions: add them to `COMMANDS` in `src/plugin.js` and place them in a group of `MENU_LAYOUT` in `src/ui/menus.js` (shared by the item and collection IACR menus; Fluent ids `menu-<id>`, `progress-<id>`, groups `menu-group-<group>`).
 - User-visible text goes in `addon/locale/en-US/iacr-tools.ftl` (ids prefixed `iacr-tools-`; code uses the id without the prefix). In Fluent, a literal brace is `{"{"}`. The Fluent test in `test/zotero.test.js` scans a fixed list of files: add new ones that format ids.
 - Plugin windows are plain HTML in `addon/content/`, opened from `chrome://iacr-tools/content/…` (`chromeURL(ASSETS.x)`); a `jar:` URL gives a blank window. State and labels come in through `window.arguments[0]`.
 - Style: tabs, double quotes, short comments explaining why, a header comment per file. Match the surrounding code.

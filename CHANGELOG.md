@@ -2,6 +2,10 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **A tidier IACR menu**, the same on papers and on collections: **Update All** on top, then submenus **Metadata** (Update from CryptoBib, Springer Chapter → Conference Paper, Preprint → Published Version), **ePrint** (Find ePrint Version, Download ePrint PDF, Check for Revised PDF, Open ePrint Page), **Duplicates & Versions** (Find Duplicates…, Link ePrint and Published Versions), **Copy & Export** (Copy as List, Copy LaTeX Citation, Export BibTeX (Not in CryptoBib)…), and on collections **Add Papers** (From a List…, From a Folder of PDFs…). The collection menu now has only the IACR entry at its top level; the imports stay in the File menu too.
+
 ## 1.5.1 — 2026-10-02
 
 - **Duplicate papers**: an ePrint preprint can be merged into its published version (**Merge into One Item**): the published item keeps its metadata and records the ePrint id in Extra, the preprint's PDF, notes, tags and collections move to it, and the preprint goes to the trash. With several published versions (conference and journal), you choose which to keep.

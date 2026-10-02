@@ -1,46 +1,54 @@
-## Item context menu
+## IACR submenu (items and collections)
 
 iacr-tools-menu-root =
     .label = IACR
-iacr-tools-menu-convert-springer =
-    .label = Convert Springer Chapters to Conference Papers
+iacr-tools-menu-process-all =
+    .label = Update All
+iacr-tools-menu-group-metadata =
+    .label = Metadata
 iacr-tools-menu-sync-cryptobib =
-    .label = Update Metadata from CryptoBib
+    .label = Update from CryptoBib
+iacr-tools-menu-convert-springer =
+    .label = Springer Chapter → Conference Paper
+iacr-tools-menu-upgrade-preprints =
+    .label = Preprint → Published Version
+iacr-tools-menu-group-eprint =
+    .label = ePrint
 iacr-tools-menu-find-eprint =
     .label = Find ePrint Version
 iacr-tools-menu-download-eprint =
-    .label = Find and Download ePrint PDF
+    .label = Download ePrint PDF
 iacr-tools-menu-check-eprint-revisions =
-    .label = Check for Revised ePrint Versions
-iacr-tools-menu-upgrade-preprints =
-    .label = Update Preprints to Published Versions
-iacr-tools-menu-link-versions =
-    .label = Link ePrint and Published Versions
-iacr-tools-menu-process-all =
-    .label = Do All of the Above (Except Downloads)
-iacr-tools-menu-find-duplicates =
-    .label = Find Other Copies and Versions…
+    .label = Check for Revised PDF
 iacr-tools-menu-open-eprint =
     .label = Open ePrint Page
+iacr-tools-menu-group-versions =
+    .label = Duplicates & Versions
+iacr-tools-menu-find-duplicates =
+    .label = Find Duplicates…
+iacr-tools-menu-link-versions =
+    .label = Link ePrint and Published Versions
+iacr-tools-menu-group-export =
+    .label = Copy & Export
 iacr-tools-menu-copy-list =
     .label = Copy as List
 iacr-tools-menu-copy-latex =
     .label = Copy LaTeX Citation
 iacr-tools-menu-export-bibtex =
-    .label = Export BibTeX of Papers Not in CryptoBib…
+    .label = Export BibTeX (Not in CryptoBib)…
+iacr-tools-menu-group-add =
+    .label = Add Papers
+iacr-tools-menu-add-list-here =
+    .label = From a List…
+iacr-tools-menu-import-folder-here =
+    .label = From a Folder of PDFs…
 
-## File menu and collection context menu
+## File menu
 
 iacr-tools-menu-import-folder =
     .label = Import PDFs from Folder…
 iacr-tools-menu-add-list =
     .label = Add Papers from a List…
-iacr-tools-menu-copy-collection-list =
-    .label = Copy Papers as List
-iacr-tools-menu-export-collection-bibtex =
-    .label = Export BibTeX of Papers Not in CryptoBib…
-iacr-tools-menu-find-collection-duplicates =
-    .label = Find Duplicate Papers…
 
 ## Tools menu
 
