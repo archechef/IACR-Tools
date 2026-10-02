@@ -6,6 +6,7 @@ import { eprintPageURL } from "./core/eprint.js";
 import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
 import { createCryptoBibSyncAction } from "./zotero/cryptobib-sync.js";
+import { DoiPdfAction } from "./zotero/doi-pdf.js";
 import { EprintActions, storedEprintId } from "./zotero/eprint.js";
 import { FolderImporter } from "./zotero/folder-import.js";
 import { ListImporter } from "./zotero/list-import.js";
@@ -38,6 +39,8 @@ export const COMMANDS = Object.freeze([
 	{ id: "sync-cryptobib", actions: ["sync"] },
 	{ id: "find-eprint", actions: ["findEprint"] },
 	{ id: "download-eprint", actions: ["downloadEprint"] },
+	// The ePrint lookup first, so that papers with an ePrint version are recognized (and recorded).
+	{ id: "download-doi-pdf", actions: ["findEprint", "downloadViaDoi"] },
 	{ id: "check-eprint-revisions", actions: ["checkEprintRevision"] },
 	{ id: "upgrade-preprints", actions: ["upgradePreprint"] },
 	{ id: "link-versions", actions: ["linkVersions"] },
@@ -54,6 +57,7 @@ const AUTO_ACTIONS = Object.freeze([
 	{ pref: "autoSyncCryptoBib", action: "sync" },
 	{ pref: "autoFindEprint", action: "findEprint" },
 	{ pref: "autoDownloadEprint", action: "downloadEprint" },
+	{ pref: "autoDownloadViaDoi", action: "downloadViaDoi" },
 	{ pref: "autoLinkVersions", action: "linkVersions" },
 ]);
 
@@ -96,6 +100,7 @@ export class IACRTools {
 		], this.log);
 		const eprintKey = () => String(this.prefs.get("eprintExtraKey"));
 		const eprint = new EprintActions({ Zotero, prefs: this.prefs, finder, http, md5: (path) => files.md5(path) });
+		const viaDoi = new DoiPdfAction({ Zotero, eprintIdOf: (context) => eprint.eprintIdOf(context), timers });
 		const versions = createVersionActions(this.prefs);
 
 		/** @type {Record<string, import("./zotero/pipeline.js").Action>} */
@@ -104,6 +109,7 @@ export class IACRTools {
 			sync: createCryptoBibSyncAction(this.prefs),
 			findEprint: eprint.find,
 			downloadEprint: eprint.download,
+			downloadViaDoi: viaDoi.action,
 			checkEprintRevision: eprint.checkRevision,
 			upgradePreprint: versions.upgrade,
 			linkVersions: versions.link,
@@ -383,7 +389,9 @@ export class IACRTools {
 				collectionID: collection?.id ?? null,
 				reorganize: Boolean(collection) && list.reorganize,
 				metadataActions: prefs.get("autoSyncCryptoBib") ? [this.actions.sync] : [],
-				eprintActions: [list.download ? this.actions.downloadEprint : this.actions.findEprint],
+				eprintActions: list.download
+					? [this.actions.downloadEprint, ...(prefs.get("listDownloadViaDoi") ? [this.actions.downloadViaDoi] : [])]
+					: [this.actions.findEprint],
 			}, { onEntryDone: (entry, result) => progress.entryDone(entry, result), shouldStop: () => progress.stopRequested });
 			await this.#moveRefiledFiles(summary, progress);
 			progress.finish();

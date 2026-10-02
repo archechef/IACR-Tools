@@ -124,6 +124,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `create-item.js` | new items from a CryptoBib record or an ePrint page |
 | `list-import.js`, `list-export.js`, `folder-import.js` | the imports and the list export |
 | `collections.js` | `CollectionPaths`: collections by path below a base, created when missing (both imports) |
+| `doi-pdf.js` | `DoiPdfAction`: the PDF of a paper without an ePrint version through Zotero's Find Full Text, one request at a time |
 | `zotmoov.js` | asks ZotMoov to move the files of papers the list import moved between collections |
 | `latex.js` | `\cite` keys and the BibTeX export of papers CryptoBib lacks |
 | `duplicates.js` | `DuplicateFinder`: find groups, merge copies, merge a preprint into its published version, link versions, dismiss |
@@ -215,6 +216,7 @@ Verified while building the plugin, against Zotero 10.0.3's own source (`omni.ja
 - **Item basics**: `item.getField("year")`, `item.relatedItems` (keys), `item.addRelatedItem(other)` (false if already related; throws for an item in another library), `item.setType(typeID)` carries base-mapped fields over to the new type and clears the others (a preprint's `repository` becomes `publisher`, which `versions.js` prevents), `item.dateAdded` is `YYYY-MM-DD HH:MM:SS` in UTC.
 - **Collections**: `collection.getChildItems(asIDs)`, `getChildCollections()`; the preference `recursiveCollections` (View → Show Items from Subcollections) decides whether subcollections count.
 - **Collection membership**: `item.getCollections()` (ids of the collections the item is directly in), `item.addToCollection(id)` / `item.removeFromCollection(id)`, saved with `item.saveTx()`. `new Zotero.Collection({ name, libraryID, parentID })`; `Zotero.Collections.getByParent(id)` / `getByLibrary(libraryID)` (top level); a top-level collection's `parentID` is `false`.
+- **Find Full Text**: `Zotero.Attachments.addAvailableFile(item, { methods })` (Zotero 7+; `addAvailablePDF` is deprecated) tries resolvers in order — `doi` (the `https://doi.org/<DOI>` page, fetched with `Zotero.HTTP.request` and its redirects followed, so IP-based institutional access applies), `url` (the item's URL), `oa` (Unpaywall via `Zotero.Utilities.Internal.getOpenAccessPDFURLs`), `custom` (the JSON preference `extensions.zotero.findPDFs.resolvers`) — and returns the new attachment or `false`. It may show a CAPTCHA dialog. It does not throttle by itself: only the batch version `addAvailableFiles` (the context menu, with its own queue window) spaces requests to the same domain by 1 s. `canFindFileForItem` requires a DOI, URL or PMCID and no PDF/EPUB attachment.
 - **Export translators**: Zotero's BibTeX is `9cb70025-a888-4a29-a210-93ec52da40d4` and uses an item's `citationKey` field or a `Citation Key:` line in Extra when present; Better BibTeX is `ca65189f-8815-4afe-8c8b-8c7c15f0edca`, its pinned keys come from `Zotero.BetterBibTeX.KeyManager.get(itemID)?.citationKey`.
 
 ### ZotMoov

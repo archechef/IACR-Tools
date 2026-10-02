@@ -51,6 +51,15 @@ export class EprintActions {
 		return String(this.prefs.get("eprintExtraKey"));
 	}
 
+	/**
+	 * The item's ePrint id, stored or looked up (once per pipeline run, shared
+	 * with the other actions of the item), without storing it.
+	 * @returns {Promise<string | null>}
+	 */
+	async eprintIdOf(context) {
+		return (await this.#resolveId(context))?.id ?? null;
+	}
+
 	/** Resolves (and stores) the ePrint id once per pipeline run. */
 	#resolveId(context) {
 		return context.memo("eprintId", async () => {

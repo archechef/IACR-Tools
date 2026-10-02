@@ -10,6 +10,7 @@ import { eprintPaperFromPage } from "../src/core/eprint-page.js";
 import { parseList, parseSection, relativeCollectionPath } from "../src/core/list.js";
 import { CryptoBibStore } from "../src/zotero/cryptobib-store.js";
 import { createCryptoBibSyncAction } from "../src/zotero/cryptobib-sync.js";
+import { DoiPdfAction } from "../src/zotero/doi-pdf.js";
 import { EprintActions } from "../src/zotero/eprint.js";
 import { cryptoBibSource, EprintFinder, iacrSearchSource } from "../src/zotero/eprint-sources.js";
 import { collectionAsList, itemsAsList } from "../src/zotero/list-export.js";
@@ -120,8 +121,8 @@ const SEARCH_RESULTS = {
 
 let env;
 
-function setup({ clipboard = "", translateDOI = () => null } = {}) {
-	const Zotero = createFakeZotero({ clipboard, translateDOI });
+function setup({ clipboard = "", translateDOI = () => null, findFile = () => null } = {}) {
+	const Zotero = createFakeZotero({ clipboard, translateDOI, findFile });
 	const prefs = new Prefs({ Zotero, Services: null });
 	const dataDirectory = mkdtempSync(join(tmpdir(), "iacr-list-"));
 	const log = (msg) => Zotero.logs.push(msg);
@@ -156,6 +157,7 @@ function setup({ clipboard = "", translateDOI = () => null } = {}) {
 	const pipeline = new Pipeline({ Zotero, store, log });
 	const finder = new EprintFinder(() => [cryptoBibSource(store), iacrSearchSource(http)], log);
 	const eprint = new EprintActions({ Zotero, prefs, finder });
+	const viaDoi = new DoiPdfAction({ Zotero, eprintIdOf: (context) => eprint.eprintIdOf(context), timers: { setTimeout: (fn) => fn() } });
 	const importer = new ListImporter({
 		Zotero, http, files, store, pipeline, finder, log,
 		eprintKey: () => "IACR ePrint",
@@ -168,7 +170,7 @@ function setup({ clipboard = "", translateDOI = () => null } = {}) {
 		eprintActions: [eprint.download],
 		...overrides,
 	});
-	return { Zotero, store, importer, options, dataDirectory, requested };
+	return { Zotero, store, importer, options, dataDirectory, requested, eprint, viaDoi };
 }
 
 beforeEach(() => {
@@ -590,4 +592,28 @@ test("ZotMoov moves the files it manages into the folder of the paper's new coll
 		directory: "C:/Zotero",
 		options: { into_subfolder: true, subdir_str: "{%c}", preferred_collection: 42 },
 	}], "only the linked file; ZotMoov handles new stored files itself");
+});
+
+test("a listed paper without an ePrint version gets its PDF via the DOI; one with an ePrint version does not", async () => {
+	env.store.dispose();
+	rmSync(env.dataDirectory, { recursive: true, force: true });
+	env = setup({
+		translateDOI: (doi) => (doi === "10.1145/1234567.1234568"
+			? { itemType: "journalArticle", fields: { title: "A Paper From Another Publisher", date: "2015", DOI: doi } }
+			: null),
+		findFile: () => ({ url: "https://dl.acm.org/doi/pdf/10.1145/1234567.1234568" }),
+	});
+	const results = byRaw(await env.importer.run(
+		parseList("10.1145/1234567.1234568\n2008/045"),
+		env.options({ eprintActions: [env.eprint.download, env.viaDoi.action] }),
+	));
+	const published = results["10.1145/1234567.1234568"];
+	assert.equal(published.status, "added");
+	assert.match(published.detail, /Full Text PDF from dl\.acm\.org/);
+	assert.equal(published.item.attachments.length, 1);
+
+	const preprint = results["2008/045"];
+	assert.equal(preprint.item.attachments.length, 1, "only the ePrint PDF");
+	assert.equal(preprint.item.attachments[0].url, "https://eprint.iacr.org/2008/045.pdf");
+	assert.deepEqual(env.Zotero.Attachments.fileRequests.map((r) => r.itemID), [published.item.id], "Find Full Text only for the paper without ePrint");
 });

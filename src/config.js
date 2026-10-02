@@ -59,6 +59,8 @@ export const PREFS = Object.freeze({
 	autoSyncCryptoBib: { key: "autoSyncCryptoBib", default: true },
 	autoFindEprint: { key: "autoFindEprint", default: false },
 	autoDownloadEprint: { key: "autoDownloadEprint", default: false },
+	/** New papers without an ePrint version get their PDF via the DOI (Zotero's Find Full Text). */
+	autoDownloadViaDoi: { key: "autoDownloadViaDoi", default: false },
 	/** New preprints that CryptoBib lists as published become the published paper. */
 	autoUpgradePreprints: { key: "autoUpgradePreprints", default: false },
 	/** New items are linked (as related items) with their ePrint or published version in the library. */
@@ -90,6 +92,8 @@ export const PREFS = Object.freeze({
 	listReorganize: { key: "listImport.reorganize", default: false },
 	/** List import: after moving papers between collections, let ZotMoov move their files along. */
 	listMoveFilesWithZotMoov: { key: "listImport.moveFilesWithZotMoov", default: true },
+	/** List import: a paper without an ePrint version gets its PDF via the DOI (when PDFs are downloaded). */
+	listDownloadViaDoi: { key: "listImport.downloadViaDoi", default: true },
 	/** A revised ePrint PDF replaces the old one (moved to the trash) instead of being added next to it. */
 	replaceRevisedEprint: { key: "replaceRevisedEprint", default: false },
 	/** Papers looked up or downloaded at the same time (list import, menu commands). */
@@ -295,6 +299,22 @@ export const LIST = Object.freeze({
 	maxCommentLength: 100,
 	/** File types offered by the file picker. */
 	fileFilter: "*.txt; *.md; *.csv; *.bib; *.json",
+});
+
+/**
+ * PDFs of papers without an ePrint version, fetched through the DOI with
+ * Zotero's own "Find Full Text" (Zotero.Attachments.addAvailableFile).
+ */
+export const DOI_PDF = Object.freeze({
+	/**
+	 * Zotero's resolvers to use: the DOI's landing page (publisher, with the
+	 * user's own access), open-access copies (Unpaywall) and the custom
+	 * resolvers of the preference extensions.zotero.findPDFs.resolvers. Not
+	 * "url": an item's URL is often not the paper's page.
+	 */
+	methods: Object.freeze(["doi", "oa", "custom"]),
+	/** Fetches run one at a time, at least this far apart (Zotero waits 1 s per domain). */
+	requestSpacingMs: 1000,
 });
 
 /** ZotMoov (another plugin) moves attachment files into a folder per collection. */

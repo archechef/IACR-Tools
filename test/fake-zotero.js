@@ -323,10 +323,12 @@ class FakeCollection {
  *   Stand-in for Zotero's metadata retrieval.
  * @param {(attachment: FakeFileAttachment) => string} [options.fullText]
  * @param {(path: string) => Promise<string>} [options.storeFile]  Copies an imported file into "storage".
+ * @param {(item: FakeItem) => ({ url: string, title?: string } | null)} [options.findFile]
+ *   Stand-in for Zotero's Find Full Text (DOI, open access, custom resolvers).
  */
 export function createFakeZotero({
 	recognize = () => null, fullText = () => "", storeFile = async (path) => path, clipboard = "", translateDOI = () => null,
-	download = (url) => `PDF of ${url}`, now = () => "2026-10-01 12:00:00",
+	download = (url) => `PDF of ${url}`, now = () => "2026-10-01 12:00:00", findFile = () => null,
 } = {}) {
 	const registry = new Map();
 	const collections = new Map();
@@ -406,6 +408,21 @@ export function createFakeZotero({
 			},
 			async linkFromFile({ file, collections: ids = [] }) {
 				return new FakeFileAttachment(registry, { path: file, linked: true, collections: ids });
+			},
+			/** Test helper: the calls of addAvailableFile. */
+			fileRequests: [],
+			/**
+			 * Mirrors Zotero.Attachments.addAvailableFile: a PDF attachment found
+			 * through the item's DOI, or false when nothing was found.
+			 */
+			async addAvailableFile(item, options = {}) {
+				zotero.Attachments.fileRequests.push({ itemID: item.id, options });
+				const found = findFile(item);
+				if (!found) return false;
+				const attachment = new FakeAttachment({ url: found.url, title: found.title ?? "Full Text PDF", contentType: "application/pdf", dateAdded: now() });
+				registry.set(attachment.id, attachment);
+				item.attachments.push(attachment);
+				return attachment;
 			},
 			async importFromURL({ parentItemID, url, title, contentType }) {
 				const attachment = new FakeAttachment({ url, title, contentType, dateAdded: now() });

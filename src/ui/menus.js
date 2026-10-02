@@ -39,6 +39,7 @@ export const MENU_LAYOUT = Object.freeze([
 		entries: [
 			{ command: "find-eprint" },
 			{ command: "download-eprint" },
+			{ command: "download-doi-pdf" },
 			{ command: "check-eprint-revisions" },
 			{
 				id: "open-eprint",

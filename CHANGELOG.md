@@ -2,6 +2,10 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **PDFs through the DOI** for papers without an IACR ePrint version, with Zotero's own Find Full Text (publisher page, open-access copies, custom resolvers), one request at a time. New command IACR → ePrint & PDFs → Download PDF via DOI (Papers Without ePrint Version); Add Papers from a List uses it when downloading PDFs (preference, on); new items optionally (preference, off).
+
 ## 1.5.3 — 2026-10-02
 
 - The progress window of imports and commands shows clearly when a run is over: a coloured badge next to the title (Done, Done with problems, Stopped, Failed), the bar in the same colour, a mark in the window title, and a taskbar flash when the window is in the background.

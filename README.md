@@ -4,7 +4,7 @@ A Zotero 8–10 plugin for cryptographers:
 
 - **Springer conference papers become “Conference Paper” items.** Springer publishes proceedings (LNCS, CCIS, …) as books, so Zotero saves their papers as *Book Section*. The plugin converts them. `bookTitle` becomes `proceedingsTitle`, and a DOI stored in Extra moves to the DOI field.
 - **Metadata comes from [CryptoBib](https://cryptobib.di.ens.fr).** Items are matched by DOI, then by title and authors (with fuzzy matching). CryptoBib's values then replace or fill in the title, authors, editors, proceedings title, conference name (`EUROCRYPT 2008`), volume, pages, series, publisher, venue, date and DOI. The CryptoBib key (`EC:Bernstein08`) is stored as the citation key.
-- **ePrint versions.** The plugin finds the IACR ePrint version of a paper (via CryptoBib, then dblp, then eprint.iacr.org search), stores its id and can download the PDF. It notices when the paper was revised on ePrint and fetches the new PDF.
+- **ePrint versions.** The plugin finds the IACR ePrint version of a paper (via CryptoBib, then dblp, then eprint.iacr.org search), stores its id and can download the PDF. It notices when the paper was revised on ePrint and fetches the new PDF. Papers with no ePrint version get their PDF through the DOI instead, with Zotero's own *Find Full Text* (publisher page, or an open-access copy).
 
 - **Duplicate papers across versions.** A report of papers that are probably the same paper (copies of one publication, or its ePrint, conference and journal versions), to merge the copies and link the versions.
 
@@ -27,7 +27,7 @@ Zotero checks for updates on its own once the plugin is installed.
 
 ## Adding papers from a list
 
-**File → Add Papers from a List…** (or right-click a collection → **IACR → Add Papers → From a List…**) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the ePrint PDFs are downloaded. (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
+**File → Add Papers from a List…** (or right-click a collection → **IACR → Add Papers → From a List…**) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the PDFs are downloaded: the ePrint PDF, or, for a paper with no ePrint version, the PDF found through its DOI (see [PDFs through the DOI](#pdfs-through-the-doi); this fallback can be switched off in the preferences). (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
 
 The other direction is **IACR → Copy & Export → Copy as List**, in the right-click menu of the selected items or of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back. A collection is copied with a section per subcollection (see below), so importing the list rebuilds the structure.
 
@@ -79,6 +79,18 @@ JC:LibYun20
 
 **ZotMoov.** [ZotMoov](https://github.com/wileyyugioh/zotmoov) files PDFs in a folder per collection (`{%c}`) when they are added, but does not move them again when a paper changes collection. After reorganizing, the plugin asks ZotMoov to move the files of the moved papers into the folder of their new subcollection, as ZotMoov's own *Move Selected to Directory* would. This happens only when ZotMoov is installed and set to move (not copy) files into subdirectories, only for files ZotMoov already manages, and not for papers that are also in a collection outside the selected one (their file belongs to the other project as well). It can be switched off in the preferences. New papers need no help: ZotMoov uses the subcollection a paper was added to.
 
+## PDFs through the DOI
+
+Published papers without an IACR ePrint version can still get a PDF: the plugin hands them to Zotero's own **Find Full Text** (*right-click → Find Full Text*), which tries
+
+1. the DOI's landing page at the publisher, fetched by Zotero from your computer, so access through the campus network or VPN works (a log-in in your web browser does not carry over);
+2. open-access copies of the paper found by Unpaywall (accepted manuscripts in repositories, author pages);
+3. any custom PDF resolvers you configured in Zotero (`extensions.zotero.findPDFs.resolvers`).
+
+The item's URL is not tried, since it is often not the paper's own page. A paper is only fetched this way when it has a DOI, has no PDF (or EPUB) yet and has **no ePrint version** — the plugin looks that up first, because the ePrint PDF is the full version and free. Requests go out one at a time, a second apart, so a list of Springer papers does not trip the publisher's rate limit. If a publisher asks for a CAPTCHA, Zotero shows it. A paper behind a paywall you have no access to is reported as *no PDF found via the DOI*.
+
+It runs in three places: **IACR → ePrint & PDFs → Download PDF via DOI (Papers Without ePrint Version)** on papers or a collection; **Add Papers from a List** when PDFs are downloaded (preference, on by default); and on new items (preference, off by default, as a publisher may show a CAPTCHA at any time).
+
 ## Importing a folder of PDFs
 
 **File → Import PDFs from Folder…** (or right-click a collection → **IACR → Add Papers → From a Folder of PDFs…**) asks for a folder, scans it and its subfolders, and shows what it found before changing anything.
@@ -104,9 +116,10 @@ Right-click papers, or a collection, → **IACR**. On papers the commands apply 
   - **Update from CryptoBib**
   - **Springer Chapter → Conference Paper**
   - **Preprint → Published Version**: a preprint that CryptoBib lists as published gets the published metadata and type; its ePrint id stays in Extra and its PDF stays attached. If the published version is already in the library, the two are linked instead.
-- **ePrint**
+- **ePrint & PDFs**
   - **Find ePrint Version**: stores the id in Extra.
   - **Download ePrint PDF**: finds the version first if needed.
+  - **Download PDF via DOI (Papers Without ePrint Version)**: looks up the ePrint version first (and records it); papers that have none, have a DOI and no PDF yet get their PDF through the DOI (below).
   - **Check for Revised PDF**: when the ePrint page was revised after the attached PDF, the new PDF is added and the old one keeps its date in its title (or goes to the trash, see the preferences). An identical download is discarded.
   - **Open ePrint Page** (papers only)
 - **Duplicates & Versions**
@@ -120,7 +133,7 @@ Elsewhere:
 - **Tools → Update CryptoBib Database**: fetches the latest export.
 - **Tools → Find Duplicate Papers…**: the duplicate report for the library.
 - Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background. When the run is over, a badge next to the title says how it ended (*Done*, *Done, with problems*, *Stopped* or *Failed*), the bar takes its colour, the window title starts with a matching mark (✓ when all went well), and a window left in the background flashes in the taskbar.
-- **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted, updated from CryptoBib and linked with their other version in the library automatically. ePrint lookup and download, and turning published preprints into the published paper, can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
+- **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted, updated from CryptoBib and linked with their other version in the library automatically. ePrint lookup and download, the PDF through the DOI for papers without an ePrint version, and turning published preprints into the published paper, can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
 CryptoBib (~40 MB) is downloaded on first use into `<Zotero data dir>/iacr-tools/`. It is refreshed after 30 days, in the background.
 
@@ -145,6 +158,7 @@ never defines a paper twice.
 | Setting | Default |
 |---|---|
 | Automatic conversion / CryptoBib update / ePrint lookup / PDF download for new items | on / on / off / off |
+| New items: PDF via the DOI when there is no ePrint version | off |
 | New items: turn published preprints into the published paper / link ePrint and published versions | off / on |
 | Overwrite existing fields, replace authors and editors | on, on |
 | Venue name style (CryptoBib `abbrev0` … `abbrev3`) | full (`abbrev0`) |
@@ -157,6 +171,7 @@ never defines a paper twice.
 | Folder import: collections for folders, link instead of copy, add PDF to existing item | on, off, on |
 | Folder import: look up ePrint versions / download ePrint PDFs | on / off |
 | List import: download the ePrint PDF of each paper | on |
+| List import: when downloading, fetch the PDF via the DOI for papers without an ePrint version | on |
 | List import: move papers already in the collection into the subcollections the list names (also a checkbox in the paste box) | off |
 | List import: let ZotMoov move the files of moved papers | on |
 
