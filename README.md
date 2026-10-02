@@ -29,7 +29,7 @@ Zotero checks for updates on its own once the plugin is installed.
 
 **File → Add Papers from a List…** (or right-click a collection) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the ePrint PDFs are downloaded. (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
 
-The other direction is **Copy as List** in the right-click menu of the selected items, and **Copy Papers as List** in the right-click menu of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back.
+The other direction is **IACR → Copy as List** in the right-click menu of the selected items, and **IACR → Copy Papers as List** in the right-click menu of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back.
 
 One entry per line; everything after `#` is ignored:
 
@@ -80,7 +80,7 @@ Zotero has no user-defined fields. The id is stored as a line in **Extra**, `IAC
 - **Tools → Find Duplicate Papers…**: the duplicate report for the library.
 - Right-click a collection → **IACR**: the same commands for all papers of the collection (including its subcollections when **View → Show Items from Subcollections** is on), plus Copy Papers as List, Copy LaTeX Citation, Export BibTeX of Papers Not in CryptoBib… and Find Duplicate Papers…. Right-click a library (e.g. My Library) to run them on all its papers, after a confirmation.
 - Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
-- **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted and updated from CryptoBib automatically. ePrint lookup and download on save can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
+- **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted, updated from CryptoBib and linked with their other version in the library automatically. ePrint lookup and download, and turning published preprints into the published paper, can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
 CryptoBib (~40 MB) is downloaded on first use into `<Zotero data dir>/iacr-tools/`. It is refreshed after 30 days, in the background.
 
@@ -123,53 +123,15 @@ The paste box, the progress window, the ePrint column and the menus are the only
 ## Development
 
 ```sh
-npm install        # esbuild + TypeScript (for type checking only)
-npm run build      # → build/zotero-iacr-tools-<version>.xpi (falls back to Bun if esbuild is missing)
-npm test           # unit + integration tests (node:test); the bundle smoke test runs after a build
+npm ci             # esbuild and TypeScript (type checking only)
 npm run check      # JSDoc type check
+npm run build      # build/zotero-iacr-tools-<version>.xpi
+npm test           # tests (node:test); the test of the built plugin needs a build first
 ```
 
-Code layout:
+The [developer guide](docs/DEVELOPMENT.md) explains the architecture, every module, the conventions, testing, how to add commands, preferences and windows, the Zotero and ePrint facts the code relies on, releasing, and the known limitations. Coding agents start with [AGENTS.md](AGENTS.md). Changes per version are in the [changelog](CHANGELOG.md).
 
-```
-src/config.js        every constant: URLs, preferences, thresholds, series lists, file names
-src/core/            pure logic, no Zotero dependency
-  bibtex.js          BibTeX parser with @string macros (parses all of CryptoBib in ~1 s)
-  latex.js           LaTeX → Unicode / Zotero rich text
-  text.js, matching.js  normalization, name parsing, source-independent matching
-  cryptobib.js       CryptoBib records and index (DOI / title / author lookups)
-  mapping.js         declarative CryptoBib → Zotero field mapping
-  pdf-text.js        DOIs / ePrint ids in PDF text and file names, CryptoBib identification
-  list.js            reading-list parser (ids, DOIs, keys, titles, BibTeX)
-  list-format.js     writing a list back out
-  eprint-page.js     metadata from an ePrint paper page
-src/zotero/          Zotero integration, all dependencies injected
-  pipeline.js        Action + Pipeline: shared by menu commands and automatic processing
-  springer.js, cryptobib-sync.js, eprint.js   the actions
-  eprint-sources.js  CryptoBib / dblp / eprint.iacr.org sources behind one interface
-  cryptobib-store.js download, cache (parsed JSON), lazy load, idle unload
-  folder-import.js   folder scan, import, identification and duplicate handling
-  list-import.js     reading lists: resolution, duplicate handling, ePrint PDFs
-  list-export.js     papers of the library as a list (the same format)
-  create-item.js     items from a CryptoBib record or an ePrint page
-  library-index.js   the library's files (path, MD5, size) and papers (DOI, ePrint id, title)
-  item.js            Zotero.Item wrapper (base fields, Extra fallback, type conversion)
-src/ui/              MenuManager menus, item-tree column, progress window, Fluent
-addon/               manifest, bootstrap, preference pane, locale (templated by the build)
-```
-
-Names, ids and paths are defined once in `src/config.js`. The build fills them into `addon/` through `__PLACEHOLDERS__`.
-
-## Releasing
-
-Bump `version` in `package.json`, commit, then tag and push:
-
-```sh
-git tag v1.4.1
-git push origin v1.4.1
-```
-
-The release workflow builds the plugin and attaches the `.xpi` and `updates.json` to a GitHub release. Installed copies find the new version through `updates.json`.
+Releases are published by pushing a tag `vX.Y.Z` that matches `package.json` (see [Releasing](docs/DEVELOPMENT.md#releasing)).
 
 ## License
 

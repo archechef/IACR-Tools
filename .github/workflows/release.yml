@@ -1,6 +1,6 @@
 name: Release
 
-# Push a tag matching package.json's version (e.g. v1.4.1) to publish a release.
+# Push a tag matching package.json's version (e.g. v1.2.3) to publish a release.
 # The .xpi and updates.json attached to it are what PLUGIN.updateURL / xpiURL point to.
 on:
   push:
