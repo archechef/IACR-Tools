@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.6.0 — 2026-10-02
 
 - Commands on a collection (Update All, metadata, ePrint & PDFs, version links, LaTeX, BibTeX export, duplicates) now apply to the papers in its subcollections too, at any depth. Until now they followed Zotero's *View → Show Items from Subcollections*, which is off by default, so subcollections were left out unnoticed. A preference (Running Commands) restores the old scope; Copy Papers as List follows it too.
 
