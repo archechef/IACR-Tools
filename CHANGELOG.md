@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.5.3 — 2026-10-02
 
 - The progress window of imports and commands shows clearly when a run is over: a coloured badge next to the title (Done, Done with problems, Stopped, Failed), the bar in the same colour, a mark in the window title, and a taskbar flash when the window is in the background.
 
