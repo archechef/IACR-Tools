@@ -72,7 +72,7 @@ A failing action is caught by the pipeline and reported as `failed`; it does not
 - **List import** ([list-import.js](../src/zotero/list-import.js)): entries are resolved in parallel (CryptoBib, then the ePrint page, then the ePrint search, then Zotero's DOI lookup); placing an entry in the library (duplicate check, item creation) runs one entry at a time; follow-up work (CryptoBib sync, ePrint PDF) is queued per item, so a paper listed twice is created and downloaded once. Section lines (`[Topic / Sub]`, parsed in `core/list.js`) give entries `collections` paths, resolved below the target collection by `CollectionPaths` ([collections.js](../src/zotero/collections.js)) during placing. With `reorganize`, placing an existing paper also removes it from the collections below the target that this run did not file it into (`claims`, so a paper in two sections keeps both); results with `refiledTo` are handed to ZotMoov afterwards ([zotmoov.js](../src/zotero/zotmoov.js)).
 - **Folder import** ([folder-import.js](../src/zotero/folder-import.js)): `scan()` changes nothing and builds a plan (new / already in the library / repeated file); `run()` imports file by file (sequentially: Zotero's recognizer is rate-limited).
 - **CryptoBib** ([cryptobib-store.js](../src/zotero/cryptobib-store.js)): downloaded once into `<data dir>/iacr-tools/` (`crypto.bib`, `abbrev0…3.bib`, `meta.json`), parsed records cached as `records-v1-abbrevN.json`, the index loaded lazily and released after 15 minutes idle, refreshed in the background when older than the preference. A download without entries, without `@string` definitions or with less than half the previous entries is rejected.
-- **Duplicates** ([core/duplicates.js](../src/core/duplicates.js) groups, [zotero/duplicates.js](../src/zotero/duplicates.js) finds, merges, links and dismisses, [ui/duplicates.js](../src/ui/duplicates.js) drives the report window).
+- **Duplicates** ([core/duplicates.js](../src/core/duplicates.js) groups, [zotero/duplicates.js](../src/zotero/duplicates.js) finds, merges copies, merges a preprint into its published version, links and dismisses, [ui/duplicates.js](../src/ui/duplicates.js) drives the report window).
 - **LaTeX** ([zotero/latex.js](../src/zotero/latex.js)): CryptoBib key when CryptoBib has the paper, else the BibTeX export's key.
 
 ### Windows
@@ -126,7 +126,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `collections.js` | `CollectionPaths`: collections by path below a base, created when missing (both imports) |
 | `zotmoov.js` | asks ZotMoov to move the files of papers the list import moved between collections |
 | `latex.js` | `\cite` keys and the BibTeX export of papers CryptoBib lacks |
-| `duplicates.js` | `DuplicateFinder`: find groups, merge copies, link versions, dismiss |
+| `duplicates.js` | `DuplicateFinder`: find groups, merge copies, merge a preprint into its published version, link versions, dismiss |
 | `auto-processor.js` | processing of newly added items |
 
 ### src/ui

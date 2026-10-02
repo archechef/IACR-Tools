@@ -61,6 +61,7 @@
 		const head = element("div", "card-head");
 		if (copies) head.append(element("span", "badge copies", t("dup-copies")));
 		if (versions) head.append(element("span", "badge versions", t("dup-versions")));
+		if (versions && group.linked) head.append(element("span", "badge linked", t("dup-linked-badge")));
 		head.append(element("span", "spacer"), button(t("dup-show"), () => io.show(group.id), false));
 		node.append(head);
 
@@ -83,6 +84,24 @@
 			actions.append(element("span", `result${group.result.error ? " error" : ""}`, group.result.text));
 		}
 		else {
+			// The preprint can be merged into a published version; with several, the user picks one.
+			if (group.mergeTargets?.length) {
+				if (group.mergeTargets.length > 1) {
+					const label = element("label", "merge-target", t("dup-merge-into"));
+					const select = element("select");
+					select.disabled = Boolean(group.busy);
+					for (const target of group.mergeTargets) {
+						const option = element("option", "", target.label);
+						option.value = String(target.id);
+						option.selected = target.id === group.mergeTarget;
+						select.append(option);
+					}
+					select.addEventListener("change", () => (group.mergeTarget = Number(select.value)));
+					label.append(select);
+					actions.append(label);
+				}
+				actions.append(button(t("dup-merge-versions"), () => io.mergeVersions(group.id, group.mergeTarget), Boolean(group.busy)));
+			}
 			if (versions && !group.linked) actions.append(button(t("dup-link"), () => io.link(group.id), Boolean(group.busy)));
 			actions.append(button(t("dup-dismiss"), () => io.dismiss(group.id), Boolean(group.busy)));
 			if (group.note) actions.append(element("span", "result", group.note));

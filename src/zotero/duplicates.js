@@ -1,10 +1,11 @@
 /**
  * Duplicate papers across versions: finds the groups (see core/duplicates.js)
  * in a library and carries out what the report window asks for: merge the
- * copies of a publication, link the versions of a paper as related items, or
- * remember that a group is not the same paper.
+ * copies of a publication, merge a paper's ePrint preprint into its published
+ * version, link the versions of a paper as related items, or remember that a
+ * group is not the same paper.
  */
-import { DUPLICATES, EXTRA, LIST } from "../config.js";
+import { DUPLICATES, EPRINT, EXTRA, LIST } from "../config.js";
 import { findDuplicateGroups } from "../core/duplicates.js";
 import { storedEprintId } from "./eprint.js";
 import { ItemWrapper } from "./item.js";
@@ -30,6 +31,7 @@ import { ItemWrapper } from "./item.js";
  * @typedef {object} ReportGroup
  * @property {string} id         Signature: the sorted item keys.
  * @property {ReportPaper[][]} clusters
+ * @property {boolean} linked    Every version is already linked with the others (related items).
  */
 
 export class DuplicateFinder {
@@ -67,9 +69,9 @@ export class DuplicateFinder {
 	}
 
 	/**
-	 * The groups of probable duplicates in a library. Groups that are already
-	 * handled (only versions, all linked) or that were marked as different
-	 * papers are left out.
+	 * The groups of probable duplicates in a library. Groups marked as
+	 * different papers are left out; versions that are already linked are
+	 * reported too (flagged `linked`), since they can still be merged.
 	 * @param {number} libraryID
 	 * @param {{ scope?: Set<number> | null }} [options]  Only groups with a member among these item ids.
 	 * @returns {Promise<{ papers: number, groups: ReportGroup[] }>}
@@ -83,10 +85,11 @@ export class DuplicateFinder {
 		/** @type {ReportGroup[]} */
 		const found = findDuplicateGroups(papers).map(({ clusters }) => {
 			const typed = /** @type {ReportPaper[][]} */ (clusters);
-			return { id: signature(typed.flat()), clusters: typed.map((cluster) => cluster.sort(byPreference)) };
+			const sorted = typed.map((cluster) => cluster.sort(byPreference));
+			return { id: signature(typed.flat()), clusters: sorted, linked: allLinked(sorted) };
 		});
 		const groups = found
-			.filter((group) => !dismissed.has(group.id) && !isHandled(group))
+			.filter((group) => !dismissed.has(group.id))
 			.filter((group) => !scope || group.clusters.flat().some((paper) => scope.has(paper.id)));
 		return { papers: papers.length, groups };
 	}
@@ -111,6 +114,46 @@ export class DuplicateFinder {
 		}
 		await this.mergeItems(keep.item, others);
 		return keep.item;
+	}
+
+	/**
+	 * The published versions a group's preprint can be merged into, the
+	 * preferred one first; empty if the group has no preprint or no published
+	 * version.
+	 * @param {ReportGroup} group
+	 * @returns {ReportPaper[]}
+	 */
+	mergeTargets(group) {
+		const live = group.clusters.flat().filter((paper) => !paper.item.deleted);
+		if (!live.some(isPreprint)) return [];
+		return live.filter((paper) => !isPreprint(paper)).sort(byPreference);
+	}
+
+	/**
+	 * Merges the group's ePrint preprints into one of its published versions
+	 * (Zotero's own merge). The published item keeps its metadata, records the
+	 * ePrint id in Extra, and receives the preprints' attachments, notes, tags,
+	 * collections and relations; the preprints go to the trash. Other published
+	 * versions (e.g. a journal version next to the conference paper) stay.
+	 * @param {ReportGroup} group
+	 * @param {number} targetID  A published version of the group.
+	 * @returns {Promise<any>} the kept item
+	 */
+	async mergeVersions(group, targetID) {
+		const target = this.mergeTargets(group).find((paper) => paper.id === targetID);
+		if (!target) throw new Error("The published version to keep is no longer in the library");
+		const preprints = group.clusters.flat().filter((paper) => isPreprint(paper) && !paper.item.deleted);
+		const eprintKey = String(this.prefs.get("eprintExtraKey"));
+		const kept = new ItemWrapper(target.item, this.Zotero);
+		const eprintId = target.eprintId ?? preprints.map((paper) => paper.eprintId).find(Boolean);
+		if (eprintId && !kept.getExtra(eprintKey)) {
+			kept.setExtra(eprintKey, eprintId);
+			await kept.save();
+		}
+		// Zotero merges items of one type; the preprints' own fields are dropped by the merge anyway.
+		for (const { item } of preprints) item.setType(target.item.itemTypeID);
+		await this.mergeItems(target.item, preprints.map((paper) => paper.item));
+		return target.item;
 	}
 
 	/**
@@ -161,12 +204,15 @@ function signature(papers) {
 	return papers.map((paper) => paper.key).sort().join(" ");
 }
 
-/** Only versions, each linked with all the others: nothing left to do. */
-function isHandled(group) {
-	if (group.clusters.some((cluster) => cluster.length > 1)) return false;
-	const papers = group.clusters.flat();
-	return papers.every((paper) => papers.every((other) => other === paper || paper.item.relatedItems.includes(other.key)));
+/** Whether every paper is linked (related items) with the papers of the other clusters. */
+function allLinked(clusters) {
+	if (clusters.length < 2) return false;
+	return clusters.every((cluster, n) => cluster.every((paper) => clusters.every((others, m) =>
+		m === n || others.every((other) => paper.item.relatedItems.includes(other.key)))));
 }
+
+/** @param {ReportPaper} paper */
+const isPreprint = (paper) => paper.itemType === EPRINT.itemType;
 
 /**
  * The copy to keep first: the one with a CryptoBib key, then a DOI, then more

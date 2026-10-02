@@ -2,6 +2,11 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **Duplicate papers**: an ePrint preprint can be merged into its published version (**Merge into One Item**): the published item keeps its metadata and records the ePrint id in Extra, the preprint's PDF, notes, tags and collections move to it, and the preprint goes to the trash. With several published versions (conference and journal), you choose which to keep.
+- Versions that are already linked as related items are now reported too, marked **Linked**, so that they can be merged; before, such a pair (e.g. a CRYPTO paper and its ePrint preprint in the same collection) was silently left out.
+
 ## 1.5.0 — 2026-10-02
 
 - **Lists with sections**: in Add Papers from a List, a line `[Topic]` or `[Topic / Subtopic]` files the papers below it into that subcollection of the selected collection, created when missing. A section may repeat the selected collection's path (`[Phd → Project → Topic]`); a paper listed in two sections goes into both.

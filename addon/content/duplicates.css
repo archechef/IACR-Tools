@@ -68,6 +68,9 @@ h1 { margin: 0; font-size: 1.15em; font-weight: 600; }
 
 .badge.copies { color: var(--copies); }
 .badge.versions { color: var(--versions); }
+.badge.linked { color: var(--muted); font-weight: normal; }
+
+.merge-target { display: flex; align-items: center; gap: 6px; }
 
 .spacer { flex: 1; }
 

@@ -223,7 +223,7 @@ iacr-tools-dup-headline = Duplicate papers: { $where }
 iacr-tools-dup-status = { $papers } papers compared. { $groups ->
         [one] One group of papers is probably the same paper.
        *[other] { $groups } groups of papers are probably the same paper.
-    } Copies of one publication can be merged; versions of one paper (ePrint, conference, journal) can be linked.
+    } Copies of one publication can be merged; an ePrint preprint can be merged into its published version, and versions (ePrint, conference, journal) can be linked as related items.
 iacr-tools-dup-nothing = No duplicate papers were found among { $papers } papers.
 iacr-tools-dup-no-window = { $groups } groups of duplicate papers were found, but the report window could not be opened.
 iacr-tools-dup-close = Close
@@ -243,6 +243,10 @@ iacr-tools-dup-link = Link Versions
 iacr-tools-dup-dismiss = Not the Same Paper
 iacr-tools-dup-merged = Merged into “{ $title }”; the other copies are in the trash.
 iacr-tools-dup-linked = Versions linked as related items.
+iacr-tools-dup-linked-badge = Linked
+iacr-tools-dup-merge-versions = Merge into One Item
+iacr-tools-dup-merge-into = Keep the published version:
+iacr-tools-dup-merged-versions = The preprint was merged into “{ $title }” (its PDF, notes and tags moved there; the ePrint id is kept in Extra). The preprint is in the trash.
 iacr-tools-dup-dismissed = Marked as different papers; this group will not be reported again.
 
 ## Item tree

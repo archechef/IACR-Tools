@@ -99,23 +99,81 @@ test("merging converts copies to the kept item's type and hands them to Zotero's
 	await assert.rejects(finder.merge(group.clusters[0], 123456), /no longer in the library/);
 });
 
-test("linking relates every version with the others; a linked group of versions is not reported again", async () => {
+test("linking relates every version with the others; linked versions are still reported, flagged as linked", async () => {
 	const { Zotero, finder, conference, copy, preprint } = library();
 	let [group] = (await finder.find(1)).groups;
+	assert.equal(group.linked, false);
 	await finder.merge(group.clusters[0], conference.id);
 	[group] = (await finder.find(1)).groups;
 	assert.deepEqual(group.clusters.map((cluster) => cluster.map((p) => p.item)), [[conference], [preprint]]);
 	assert.equal(await finder.link(group), 1);
 	assert.ok(conference.relatedItems.includes(preprint.key) && preprint.relatedItems.includes(conference.key));
-	assert.equal((await finder.find(1)).groups.length, 0, "handled");
+	const [linked] = (await finder.find(1)).groups;
+	assert.equal(linked.linked, true, "still reported: it can be merged");
 	assert.equal(copy.deleted, true);
 
-	// A new copy makes it a new group again.
+	// A new copy makes it a new group, with a copy that is not linked.
 	Zotero.addItem("conferencePaper", {
 		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", date: "2008" },
 		creators: [{ firstName: "", lastName: "Gennaro", creatorType: "author" }],
 	});
-	assert.equal((await finder.find(1)).groups.length, 1);
+	const [grown] = (await finder.find(1)).groups;
+	assert.notEqual(grown.id, linked.id);
+	assert.equal(grown.linked, false);
+});
+
+/**
+ * The case reported from a real library: the CRYPTO 2016 paper (with its ePrint
+ * id in Extra) and its ePrint preprint (saved from eprint.iacr.org), linked as
+ * related items and both in the same collection.
+ */
+function kmp16() {
+	const env = library();
+	const { Zotero } = env;
+	const authors = ["Kiltz", "Masny", "Pan"].map((lastName) => ({ firstName: "", lastName, creatorType: "author" }));
+	const title = "Optimal Security Proofs for Signatures from Identification Schemes";
+	const published = Zotero.addItem("conferencePaper", {
+		fields: { title, DOI: "10.1007/978-3-662-53008-5_2", date: "2016", proceedingsTitle: "Advances in Cryptology – CRYPTO 2016", extra: "IACR ePrint: 2016/191" },
+		creators: authors,
+	});
+	const eprint = Zotero.addItem("preprint", {
+		fields: { title, archiveID: "2016/191", url: "https://eprint.iacr.org/2016/191", date: "2016", extra: "Publication info: Preprint. MINOR revision." },
+		creators: authors,
+	});
+	for (const item of [published, eprint]) item.addToCollection(7);
+	published.addRelatedItem(eprint);
+	eprint.addRelatedItem(published);
+	eprint.attachments.push({ id: 335 });
+	eprint.tags.push("Fiat-Shamir");
+	return { ...env, published, eprint };
+}
+
+test("a linked ePrint preprint is reported and can be merged into its published version", async () => {
+	const { finder, merged, published, eprint } = kmp16();
+	const group = (await finder.find(1, { scope: new Set([published.id]) })).groups[0];
+	assert.ok(group, "the pair is reported although it is linked");
+	assert.equal(group.linked, true);
+	assert.deepEqual(group.clusters.map((cluster) => cluster.map((p) => p.item)), [[published], [eprint]]);
+	assert.deepEqual(finder.mergeTargets(group).map((p) => p.item), [published]);
+
+	const kept = await finder.mergeVersions(group, published.id);
+	assert.equal(kept, published);
+	assert.deepEqual(merged.at(-1).others, [eprint], "Zotero's merge, with the preprint");
+	assert.equal(eprint.itemType, "conferencePaper", "converted first: Zotero merges items of one type");
+	assert.equal(eprint.deleted, true);
+	assert.equal(published.attachments.length, 1, "the preprint's PDF moved over");
+	assert.match(published.getField("extra"), /^IACR ePrint: 2016\/191$/m);
+	assert.equal(published.getField("proceedingsTitle"), "Advances in Cryptology – CRYPTO 2016", "the published metadata stays");
+	assert.equal((await finder.find(1, { scope: new Set([published.id]) })).groups.length, 0, "one item left");
+});
+
+test("merging a preprint records its ePrint id on the published version and refuses a preprint as target", async () => {
+	const { finder, published, eprint } = kmp16();
+	published.setField("extra", "");
+	const [group] = (await finder.find(1, { scope: new Set([published.id]) })).groups;
+	await assert.rejects(finder.mergeVersions(group, eprint.id), /no longer in the library/);
+	await finder.mergeVersions(group, published.id);
+	assert.match(published.getField("extra"), /^IACR ePrint: 2016\/191$/m, "taken from the preprint");
 });
 
 test("a group marked as different papers stays hidden; the scope limits the report", async () => {
@@ -157,4 +215,21 @@ test("the report window's actions update the group they belong to", async () => 
 	// A finished group ignores further clicks; errors are shown on the card.
 	await view.dismiss(group.id);
 	assert.match(group.result.text, /dup-linked/);
+});
+
+test("the report offers Merge into One Item for a linked preprint, and the card is done afterwards", async () => {
+	const { Zotero, finder, published, eprint } = kmp16();
+	const l10n = { format: (id, args) => (args ? `${id} ${JSON.stringify(args)}` : id) };
+	const view = new DuplicatesView({ Zotero, l10n, finder, log: () => {} });
+	view.open({ openDialog: () => ({}) }, await finder.find(1, { scope: new Set([eprint.id]) }), "Non-Interactive Assumptions");
+	const [group] = view.state.groups;
+	assert.equal(group.linked, true, "shown with the Linked badge");
+	assert.deepEqual(group.mergeTargets.map((target) => target.id), [published.id]);
+	assert.equal(group.mergeTarget, published.id);
+	assert.equal(group.mergeTargets[0].label, "Advances in Cryptology – CRYPTO 2016, 2016");
+
+	await view.mergeVersions(group.id, group.mergeTarget);
+	assert.match(group.result.text, /dup-merged-versions .*Optimal Security Proofs/);
+	assert.deepEqual(group.clusters.map((cluster) => cluster.map((paper) => paper.id)), [[published.id]]);
+	assert.deepEqual(group.mergeTargets, [], "nothing left to merge");
 });

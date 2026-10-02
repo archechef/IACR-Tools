@@ -26,6 +26,8 @@ const MAX_AUTHORS = 6;
  * @property {string} id
  * @property {PaperView[][]} clusters
  * @property {Record<number, number>} keep  Per copy cluster: the id of the item to keep.
+ * @property {Array<{ id: number, label: string }>} mergeTargets  Published versions the preprint can be merged into.
+ * @property {number | null} mergeTarget  The chosen one.
  * @property {boolean} busy
  * @property {boolean} linked
  * @property {{ text: string, error?: boolean } | null} result  Set when the group is done.
@@ -90,10 +92,25 @@ export class DuplicatesView {
 		return this.#act(groupID, async (group, view) => {
 			const kept = await this.finder.merge(group.clusters[clusterIndex], keepID);
 			group.clusters[clusterIndex] = group.clusters[clusterIndex].filter((paper) => paper.item === kept);
-			view.clusters = group.clusters.map((cluster) => cluster.map((paper) => this.#paperView(paper)));
+			this.#refresh(group, view);
 			const text = this.format("dup-merged", { title: kept.getDisplayTitle() });
-			// Versions may remain to be linked; otherwise the group is done.
-			if (group.clusters.length > 1 && !view.linked) view.note = text;
+			// Versions may remain to be merged or linked; otherwise the group is done.
+			if (group.clusters.length > 1) view.note = text;
+			else view.result = { text };
+		});
+	}
+
+	/** Merges the group's preprint into the chosen published version. */
+	mergeVersions(groupID, targetID) {
+		return this.#act(groupID, async (group, view) => {
+			const kept = await this.finder.mergeVersions(group, targetID);
+			group.clusters = group.clusters
+				.map((cluster) => cluster.filter((paper) => !paper.item.deleted))
+				.filter((cluster) => cluster.length);
+			this.#refresh(group, view);
+			const text = this.format("dup-merged-versions", { title: kept.getDisplayTitle() });
+			// A journal version next to the conference paper may remain.
+			if (group.clusters.length > 1) view.note = text;
 			else view.result = { text };
 		});
 	}
@@ -155,17 +172,31 @@ export class DuplicatesView {
 
 	/** @returns {GroupView} */
 	#groupView(group) {
-		/** @type {Record<number, number>} */
-		const keep = {};
-		for (const [i, cluster] of group.clusters.entries()) if (cluster.length > 1) keep[i] = cluster[0].id;
-		return {
+		/** @type {GroupView} */
+		const view = {
 			id: group.id,
-			clusters: group.clusters.map((cluster) => cluster.map((paper) => this.#paperView(paper))),
-			keep,
+			clusters: [],
+			keep: {},
+			mergeTargets: [],
+			mergeTarget: null,
 			busy: false,
-			linked: false,
+			linked: group.linked,
 			result: null,
 		};
+		this.#refresh(group, view);
+		return view;
+	}
+
+	/** Brings a group's view up to date with its clusters (after a merge). */
+	#refresh(group, view) {
+		view.clusters = group.clusters.map((cluster) => cluster.map((paper) => this.#paperView(paper)));
+		view.keep = {};
+		for (const [i, cluster] of group.clusters.entries()) if (cluster.length > 1) view.keep[i] = cluster[0].id;
+		view.mergeTargets = this.finder.mergeTargets(group).map((paper) => ({
+			id: paper.id,
+			label: [paper.venue || this.#paperView(paper).type, paper.year].filter(Boolean).join(", "),
+		}));
+		if (!view.mergeTargets.some((target) => target.id === view.mergeTarget)) view.mergeTarget = view.mergeTargets[0]?.id ?? null;
 	}
 
 	/** @returns {PaperView} */
