@@ -69,7 +69,7 @@ A failing action is caught by the pipeline and reported as `failed`; it does not
 
 ### Other flows
 
-- **List import** ([list-import.js](../src/zotero/list-import.js)): entries are resolved in parallel (CryptoBib, then the ePrint page, then the ePrint search, then Zotero's DOI lookup); placing an entry in the library (duplicate check, item creation) runs one entry at a time; follow-up work (CryptoBib sync, ePrint PDF) is queued per item, so a paper listed twice is created and downloaded once.
+- **List import** ([list-import.js](../src/zotero/list-import.js)): entries are resolved in parallel (CryptoBib, then the ePrint page, then the ePrint search, then Zotero's DOI lookup); placing an entry in the library (duplicate check, item creation) runs one entry at a time; follow-up work (CryptoBib sync, ePrint PDF) is queued per item, so a paper listed twice is created and downloaded once. Section lines (`[Topic / Sub]`, parsed in `core/list.js`) give entries `collections` paths, resolved below the target collection by `CollectionPaths` ([collections.js](../src/zotero/collections.js)) during placing. With `reorganize`, placing an existing paper also removes it from the collections below the target that this run did not file it into (`claims`, so a paper in two sections keeps both); results with `refiledTo` are handed to ZotMoov afterwards ([zotmoov.js](../src/zotero/zotmoov.js)).
 - **Folder import** ([folder-import.js](../src/zotero/folder-import.js)): `scan()` changes nothing and builds a plan (new / already in the library / repeated file); `run()` imports file by file (sequentially: Zotero's recognizer is rate-limited).
 - **CryptoBib** ([cryptobib-store.js](../src/zotero/cryptobib-store.js)): downloaded once into `<data dir>/iacr-tools/` (`crypto.bib`, `abbrev0…3.bib`, `meta.json`), parsed records cached as `records-v1-abbrevN.json`, the index loaded lazily and released after 15 minutes idle, refreshed in the background when older than the preference. A download without entries, without `@string` definitions or with less than half the previous entries is rejected.
 - **Duplicates** ([core/duplicates.js](../src/core/duplicates.js) groups, [zotero/duplicates.js](../src/zotero/duplicates.js) finds, merges, links and dismisses, [ui/duplicates.js](../src/ui/duplicates.js) drives the report window).
@@ -105,7 +105,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `eprint-page.js` | metadata and revision time from an ePrint paper page's meta tags |
 | `extra.js` | `Key: value` lines in Zotero's Extra field |
 | `pdf-text.js` | DOIs / ePrint ids in PDF text and file names; identifying a PDF in CryptoBib |
-| `list.js`, `list-format.js` | reading lists: parse and write |
+| `list.js`, `list-format.js` | reading lists: parse (including `[Section]` lines and collection paths) and write (flat, or with a section per subcollection) |
 | `duplicates.js` | grouping papers into copies and versions |
 | `concurrency.js` | `mapConcurrent` (bounded parallelism, stoppable), `serialized`, `serializedByKey` |
 
@@ -123,6 +123,8 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `library-index.js` | a library's papers (DOI, ePrint id, title + authors) and PDF files (path, MD5, size); finds a paper's duplicate or other version |
 | `create-item.js` | new items from a CryptoBib record or an ePrint page |
 | `list-import.js`, `list-export.js`, `folder-import.js` | the imports and the list export |
+| `collections.js` | `CollectionPaths`: collections by path below a base, created when missing (both imports) |
+| `zotmoov.js` | asks ZotMoov to move the files of papers the list import moved between collections |
 | `latex.js` | `\cite` keys and the BibTeX export of papers CryptoBib lacks |
 | `duplicates.js` | `DuplicateFinder`: find groups, merge copies, link versions, dismiss |
 | `auto-processor.js` | processing of newly added items |
@@ -212,7 +214,17 @@ Verified while building the plugin, against Zotero 10.0.3's own source (`omni.ja
 - **File pickers**: `chrome://zotero/content/modules/filePicker.mjs`.
 - **Item basics**: `item.getField("year")`, `item.relatedItems` (keys), `item.addRelatedItem(other)` (false if already related; throws for an item in another library), `item.setType(typeID)` carries base-mapped fields over to the new type and clears the others (a preprint's `repository` becomes `publisher`, which `versions.js` prevents), `item.dateAdded` is `YYYY-MM-DD HH:MM:SS` in UTC.
 - **Collections**: `collection.getChildItems(asIDs)`, `getChildCollections()`; the preference `recursiveCollections` (View → Show Items from Subcollections) decides whether subcollections count.
+- **Collection membership**: `item.getCollections()` (ids of the collections the item is directly in), `item.addToCollection(id)` / `item.removeFromCollection(id)`, saved with `item.saveTx()`. `new Zotero.Collection({ name, libraryID, parentID })`; `Zotero.Collections.getByParent(id)` / `getByLibrary(libraryID)` (top level); a top-level collection's `parentID` is `false`.
 - **Export translators**: Zotero's BibTeX is `9cb70025-a888-4a29-a210-93ec52da40d4` and uses an item's `citationKey` field or a `Citation Key:` line in Extra when present; Better BibTeX is `ca65189f-8815-4afe-8c8b-8c7c15f0edca`, its pinned keys come from `Zotero.BetterBibTeX.KeyManager.get(itemID)?.citationKey`.
+
+### ZotMoov
+
+Read from ZotMoov 1.2.32's source (`zotmoov@wileyy.com.xpi` in the Zotero profile's `extensions` folder). It exposes `Zotero.ZotMoov`.
+
+- **Auto-move** of new attachments (a notifier on `add`, after a delay) only handles stored files and calls `move(items, dst_dir, getBasePrefs())`.
+- **`{%c}`** (subdirectory wildcard) uses the item's collection whose id is `preferred_collection`, else the item's *first* collection. `getBasePrefs()` sets `preferred_collection` to the collection selected in the pane, so new papers filed only in a subcollection land in that subcollection's folder.
+- **`move(attachments, dst_dir, options)`** re-links each file attachment to `<dst_dir>/<subdirectory>/<renamed file>` (skipping ones already there and libraries other than My Library). The plugin passes `{ ...getBasePrefs(), preferred_collection }` and only linked files, so it never races the auto-move.
+- Preferences: `extensions.zotmoov.dst_dir`, `file_behavior` (`"move"` / `"copy"`), `enable_subdir_move`, `subdirectory_string`.
 
 ### IACR ePrint, dblp, CryptoBib
 
@@ -240,4 +252,6 @@ The GitHub Actions are pinned to commit hashes (with the version as a comment); 
 - **Duplicate groups are transitive**: A ~ B and B ~ C put A, B and C in one group even if A and C would not match. "Not the Same Paper" remembers the exact group (its sorted item keys), up to 1000 groups, in the preference `duplicates.dismissed`.
 - **Revision check**: a metadata-only change on ePrint also bumps `article:modified_time`; the new download is then discarded as identical, and the revision is recorded so it is not fetched again.
 - **Automatic processing** skips synced items and batches of more than 100 items.
+- **Reorganizing with a list** only moves the papers the list names; nothing removes a paper the list leaves out. The ZotMoov hand-off depends on ZotMoov's internal methods (`move`, `getBasePrefs`) and does nothing if they change.
+- **List sections** are not read from BibTeX lists.
 - **Only an English locale** (`en-US`); another language is a new `.ftl` file under `addon/locale/<locale>/`.

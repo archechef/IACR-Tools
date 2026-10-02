@@ -14,6 +14,7 @@
  */
 import { FOLDER_IMPORT } from "../config.js";
 import { identifyInCryptoBib } from "../core/pdf-text.js";
+import { CollectionPaths } from "./collections.js";
 import { createItemFromRecord } from "./create-item.js";
 import { LibraryIndex } from "./library-index.js";
 
@@ -237,7 +238,7 @@ export class FolderImporter {
 		const record = identifyInCryptoBib(index, file.name, text);
 		if (!record) return null;
 
-		const item = await createItemFromRecord(this.Zotero, record, { libraryID, collectionID, eprintKey: this.eprintKey() });
+		const item = await createItemFromRecord(this.Zotero, record, { libraryID, collectionIDs: collectionID ? [collectionID] : [], eprintKey: this.eprintKey() });
 		attachment.parentID = item.id;
 		await attachment.saveTx();
 		return item;
@@ -261,38 +262,14 @@ export class FolderImporter {
  * same name are reused, so importing a folder again does not duplicate them.
  */
 class CollectionTree {
-	/** @type {Map<string, Promise<number>>} */
-	#byPath = new Map();
-
 	constructor(Zotero, libraryID, baseCollectionID, folderName, mirror) {
-		this.Zotero = Zotero;
-		this.libraryID = libraryID;
-		this.baseCollectionID = baseCollectionID ?? null;
+		this.paths = new CollectionPaths(Zotero, libraryID, baseCollectionID);
 		this.folderName = folderName;
 		this.mirror = mirror;
 	}
 
 	/** @param {string[]} folders @returns {Promise<number | null>} */
 	async forFolders(folders) {
-		if (!this.mirror) return this.baseCollectionID;
-		let parentID = this.baseCollectionID;
-		const path = [];
-		for (const name of [this.folderName, ...folders]) {
-			path.push(name);
-			const key = JSON.stringify(path);
-			if (!this.#byPath.has(key)) this.#byPath.set(key, this.#findOrCreate(name, parentID));
-			parentID = await this.#byPath.get(key);
-		}
-		return parentID;
-	}
-
-	async #findOrCreate(name, parentID) {
-		const { Collections, Collection } = this.Zotero;
-		const siblings = parentID ? Collections.getByParent(parentID) : Collections.getByLibrary(this.libraryID);
-		const existing = siblings.find((c) => c.name === name && !c.deleted);
-		if (existing) return existing.id;
-		const collection = new Collection({ libraryID: this.libraryID, name, ...(parentID ? { parentID } : {}) });
-		await collection.saveTx();
-		return collection.id;
+		return this.mirror ? this.paths.resolve([this.folderName, ...folders]) : this.paths.baseCollectionID;
 	}
 }

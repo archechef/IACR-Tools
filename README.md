@@ -14,9 +14,9 @@ A Zotero 8–10 plugin for cryptographers:
 
 - **Import PDFs from a folder.** Imports the PDFs of a folder and its subfolders that are not in the library yet, retrieves their metadata, and can look up their ePrint versions.
 
-- **Add papers from a list.** Paste (or open) a list of ePrint ids, DOIs, CryptoBib keys or titles and the plugin adds those papers, with their ePrint PDFs.
+- **Add papers from a list.** Paste (or open) a list of ePrint ids, DOIs, CryptoBib keys or titles and the plugin adds those papers, with their ePrint PDFs. Sections such as `[Signatures]` file the papers into subcollections, and papers already in the collection can be moved to where the list says they belong.
 
-- **Copy papers out as a list.** The same format in the other direction: select papers (or a collection) and put them on the clipboard for a chat, a mail or a to-do list.
+- **Copy papers out as a list.** The same format in the other direction: select papers (or a collection, with its subcollections as sections) and put them on the clipboard for a chat, a mail or a to-do list.
 
 ## Installation
 
@@ -29,7 +29,7 @@ Zotero checks for updates on its own once the plugin is installed.
 
 **File → Add Papers from a List…** (or right-click a collection) opens a box holding the list, pre-filled from the clipboard, where it can be edited before anything happens; **Use a File Instead…** loads one from disk. Every paper that is not in the library yet is added, and a checkbox decides whether the ePrint PDFs are downloaded. (If the box cannot be opened, the command falls back to the clipboard and a plain confirmation.)
 
-The other direction is **IACR → Copy as List** in the right-click menu of the selected items, and **IACR → Copy Papers as List** in the right-click menu of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back.
+The other direction is **IACR → Copy as List** in the right-click menu of the selected items, and **IACR → Copy Papers as List** in the right-click menu of a collection: the papers land on the clipboard in exactly this format, so they can go into a chat and the answer can come straight back. A collection is copied with a section per subcollection (see below), so importing the list rebuilds the structure.
 
 One entry per line; everything after `#` is ignored:
 
@@ -45,6 +45,39 @@ Proving Tight Security for Rabin-Williams Signatures   # or just the title
 Markdown bullets and numbering are stripped, and a BibTeX bibliography (`.bib` file or pasted) works as a list too. A title written as a comment behind an identifier is kept as a fallback, so `2024/9999 # Some Paper` still finds the paper when the id is wrong.
 
 Each entry is resolved in this order: CryptoBib (by key, DOI, title, then ePrint id), the paper's ePrint page (its `citation_*` meta tags, for papers CryptoBib does not have yet), the ePrint full-text search (for titles), and finally Zotero's own DOI lookup. A paper that is already in the library is not added twice — but its ePrint PDF is fetched if it is missing.
+
+### Sections: one list for several subcollections
+
+A line in square brackets starts a section: the papers below it go into that subcollection of the collection the list is imported into. Missing subcollections are created; existing ones are found regardless of upper and lower case.
+
+```
+# Papers before the first section go into the selected collection itself
+2008/045
+
+[Signatures]
+EC:Bernstein08                    # Proving Tight Security for Rabin-Williams Signatures
+
+[Signatures / Lattice]            # nested: "/" or ">" with spaces around it, or "→"
+2024/1234
+
+[Phd → Project → Threshold]       # the selected collection's own path may be included
+JC:LibYun20
+
+[]                                # back to the selected collection
+```
+
+- A section's path is read below the selected collection. If it starts with the selected collection's own name (or its parents' names too, as in `Phd → Project → Topic` imported into *Phd → Project*), that part is dropped, so a list works whether it gives the full path or only the topic.
+- A paper listed in two sections goes into both subcollections.
+- `[2024/1234]` and other bracketed identifiers are papers, not sections. A `/` without spaces belongs to the name (`[PRF/PRP]`).
+- Imported into the library root (no collection selected), section paths start at the top level.
+
+**Reorganizing a collection.** With **Move papers already in “…” into the subcollections the list names** ticked in the paste box, a paper that is already somewhere in the selected collection (in it or any of its subcollections) is taken out of the subcollections the list does not name for it and put into those it does. So a paper sitting directly in *Project* moves to *Project → Signatures*, and one filed under the wrong topic moves to the right one. Without the box ticked, papers are only added to their sections and stay where they were. Either way:
+
+- collections outside the selected one are never touched (a paper shared with another project stays there too);
+- papers the list does not mention are left alone, so a list of a few papers never empties a topic;
+- the progress window reports a moved paper as *already in library, moved*, with where from and where to.
+
+**ZotMoov.** [ZotMoov](https://github.com/wileyyugioh/zotmoov) files PDFs in a folder per collection (`{%c}`) when they are added, but does not move them again when a paper changes collection. After reorganizing, the plugin asks ZotMoov to move the files of the moved papers into the folder of their new subcollection, as ZotMoov's own *Move Selected to Directory* would. This happens only when ZotMoov is installed and set to move (not copy) files into subdirectories, only for files ZotMoov already manages, and not for papers that are also in a collection outside the selected one (their file belongs to the other project as well). It can be switched off in the preferences. New papers need no help: ZotMoov uses the subcollection a paper was added to.
 
 ## Importing a folder of PDFs
 
@@ -117,6 +150,8 @@ never defines a paper twice.
 | Folder import: collections for folders, link instead of copy, add PDF to existing item | on, off, on |
 | Folder import: look up ePrint versions / download ePrint PDFs | on / off |
 | List import: download the ePrint PDF of each paper | on |
+| List import: move papers already in the collection into the subcollections the list names (also a checkbox in the paste box) | off |
+| List import: let ZotMoov move the files of moved papers | on |
 
 The paste box, the progress window, the ePrint column and the menus are the only UI the plugin adds.
 

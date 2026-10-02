@@ -9,14 +9,15 @@ import vm from "node:vm";
 
 const source = readFileSync(new URL("../addon/content/list-dialog.js", import.meta.url), "utf8");
 
-function openDialog() {
+function openDialog(ioOverrides = {}) {
 	const element = (localName) => ({ localName, textContent: "", value: "", checked: false, listeners: {},
 		addEventListener(type, fn) { this.listeners[type] = fn; }, focus() {}, setSelectionRange() {} });
 	const elements = {
 		description: element("p"), text: element("textarea"), download: element("input"), "download-label": element("span"),
 		accept: element("button"), file: element("button"), cancel: element("button"),
+		reorganize: element("input"), "reorganize-label": element("span"), "reorganize-row": element("label"),
 	};
-	const io = { text: "2008/045", download: true };
+	const io = { text: "2008/045", download: true, ...ioOverrides };
 	const window = {
 		arguments: [io],
 		listeners: {},
@@ -56,4 +57,19 @@ test("Escape cancels", () => {
 	const { io, elements, press } = openDialog();
 	press("Escape", elements.text);
 	assert.equal(io.action, "cancel");
+});
+
+test("the reorganize checkbox shows only for a collection, and its state comes back", () => {
+	const inLibrary = openDialog({ reorganize: true });
+	assert.equal(inLibrary.elements["reorganize-row"].hidden, true);
+	inLibrary.press("Escape", inLibrary.elements.text);
+	assert.equal(inLibrary.io.reorganize, false, "never reorganizes without a collection");
+
+	const inCollection = openDialog({ showReorganize: true, reorganize: false, reorganizeLabel: "Move papers" });
+	assert.equal(inCollection.elements["reorganize-row"].hidden, false);
+	assert.equal(inCollection.elements["reorganize-label"].textContent, "Move papers");
+	inCollection.elements.reorganize.checked = true;
+	inCollection.press("Enter", inCollection.elements.download);
+	assert.equal(inCollection.io.action, "add");
+	assert.equal(inCollection.io.reorganize, true);
 });

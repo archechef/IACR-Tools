@@ -23,7 +23,9 @@ body {
 	padding: 6px;
 }
 
-#download-row { display: flex; align-items: center; gap: 6px; }
+.option { display: flex; align-items: center; gap: 6px; }
+
+.option[hidden] { display: none; }
 
 #buttons { display: flex; align-items: center; gap: 8px; }
 

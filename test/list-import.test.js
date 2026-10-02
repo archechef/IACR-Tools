@@ -7,15 +7,16 @@ import { join } from "node:path";
 
 import { CRYPTOBIB } from "../src/config.js";
 import { eprintPaperFromPage } from "../src/core/eprint-page.js";
-import { parseList } from "../src/core/list.js";
+import { parseList, parseSection, relativeCollectionPath } from "../src/core/list.js";
 import { CryptoBibStore } from "../src/zotero/cryptobib-store.js";
 import { createCryptoBibSyncAction } from "../src/zotero/cryptobib-sync.js";
 import { EprintActions } from "../src/zotero/eprint.js";
 import { cryptoBibSource, EprintFinder, iacrSearchSource } from "../src/zotero/eprint-sources.js";
-import { itemsAsList } from "../src/zotero/list-export.js";
+import { collectionAsList, itemsAsList } from "../src/zotero/list-export.js";
 import { ListImporter } from "../src/zotero/list-import.js";
 import { Pipeline } from "../src/zotero/pipeline.js";
 import { Prefs } from "../src/zotero/prefs.js";
+import { ZotMoovFiles } from "../src/zotero/zotmoov.js";
 import { createFakeZotero } from "./fake-zotero.js";
 
 const fixture = (name) => readFileSync(new URL(`fixtures/${name}`, import.meta.url), "utf8");
@@ -391,4 +392,202 @@ test("Stop leaves the remaining entries alone", async () => {
 	assert.ok(summary.every(({ result }) => result.status === "added"));
 	const added = (await env.Zotero.Items.getAll(1)).filter((item) => item.isRegularItem());
 	assert.equal(added.length, summary.length, "nothing was added for the entries never started");
+});
+
+
+// --- Sections: lists that file papers into subcollections -------------------
+
+test("section lines put the papers below them into subcollections", () => {
+	const entries = parseList(`
+		# Papers for the project
+		EC:Bernstein08
+		[Signatures]
+		- 2008/045                # Threshold RSA
+		[Signatures / Lattice]    # a comment after a section
+		JC:LibYun20
+		[2024/1234]
+		[Phd → Project → Threshold]
+		EC:Bernstein08
+		[]
+		ACISP:GHMRS22
+	`);
+	assert.deepEqual(entries, [
+		{ raw: "EC:Bernstein08", key: "EC:Bernstein08", collections: [[], ["Phd", "Project", "Threshold"]] },
+		{ raw: "2008/045", eprintId: "2008/045", hint: "Threshold RSA", collections: [["Signatures"]] },
+		{ raw: "JC:LibYun20", key: "JC:LibYun20", collections: [["Signatures", "Lattice"]] },
+		{ raw: "2024/1234", eprintId: "2024/1234", collections: [["Signatures", "Lattice"]] },
+		{ raw: "ACISP:GHMRS22", key: "ACISP:GHMRS22", collections: [[]] },
+	], "a bracketed ePrint id is a paper; a paper listed twice keeps both places; [] is the target itself");
+	assert.deepEqual(parseSection("[PRF/PRP > Tight]"), ["PRF/PRP", "Tight"], "a slash without spaces belongs to the name");
+	assert.equal(parseSection("[EC:Bernstein08]"), null);
+	assert.equal(parseList("2008/045").at(0).collections, undefined, "a list without sections has no collections");
+});
+
+test("a section may name the target collection's own path, which is dropped", () => {
+	const base = ["Phd", "Project"];
+	assert.deepEqual(relativeCollectionPath(["Phd", "Project", "Topic"], base), ["Topic"]);
+	assert.deepEqual(relativeCollectionPath(["project", "Topic"], base), ["Topic"], "names compare without case");
+	assert.deepEqual(relativeCollectionPath(["Topic", "Sub"], base), ["Topic", "Sub"]);
+	assert.deepEqual(relativeCollectionPath(["Phd", "Other", "Topic"], base), ["Phd", "Other", "Topic"]);
+	assert.deepEqual(relativeCollectionPath(["Topic"], []), ["Topic"]);
+});
+
+/** Collections "Phd → Project" (plus the given children of Project). */
+async function projectCollections(...children) {
+	const { Zotero } = env;
+	const make = async (name, parentID) => {
+		const collection = new Zotero.Collection({ libraryID: 1, name, ...(parentID ? { parentID } : {}) });
+		await collection.saveTx();
+		return collection;
+	};
+	const phd = await make("Phd");
+	const project = await make("Project", phd.id);
+	const sub = {};
+	for (const name of children) sub[name] = await make(name, project.id);
+	return { phd, project, sub, make };
+}
+
+const bernstein = () => env.Zotero.addItem("conferencePaper", {
+	fields: { title: "Proving Tight Security for Rabin-Williams Signatures", date: "2008", DOI: "10.1007/978-3-540-78967-3_5" },
+	creators: [{ firstName: "Daniel J.", lastName: "Bernstein", creatorType: "author" }],
+});
+const libertYung = () => env.Zotero.addItem("journalArticle", {
+	fields: { title: "Adaptively Secure Non-interactive CCA-Secure Threshold Cryptosystems", date: "2020", DOI: "10.1007/s00145-020-09350-3" },
+	creators: [{ firstName: "Benoît", lastName: "Libert", creatorType: "author" }],
+});
+
+test("a list with sections files new papers into subcollections, creating the missing ones", async () => {
+	const { project, sub } = await projectCollections("Signatures");
+	const summary = byRaw(await env.importer.run(parseList(`
+		[signatures]
+		EC:Bernstein08
+		[Phd → Project → Threshold / Lattice]
+		JC:LibYun20
+		[]
+		ACISP:GHMRS22
+	`), env.options({ collectionID: project.id, eprintActions: [] })));
+
+	assert.deepEqual(env.Zotero.collectionPaths(), ["Phd", "Phd/Project", "Phd/Project/Signatures", "Phd/Project/Threshold", "Phd/Project/Threshold/Lattice"],
+		"the existing subcollection is reused regardless of case; the full path is understood");
+	const lattice = env.Zotero.Collections.getByParent(env.Zotero.Collections.getByParent(project.id).find((c) => c.name === "Threshold").id)[0];
+	assert.deepEqual(summary["EC:Bernstein08"].item.getCollections(), [sub.Signatures.id]);
+	assert.deepEqual(summary["JC:LibYun20"].item.getCollections(), [lattice.id]);
+	assert.deepEqual(summary["ACISP:GHMRS22"].item.getCollections(), [project.id]);
+	assert.ok(Object.values(summary).every((result) => result.status === "added"));
+});
+
+test("without reorganizing, papers already in the library are added to their sections and stay where they are", async () => {
+	const { project, sub } = await projectCollections("Signatures", "Threshold");
+	const paper = bernstein();
+	paper.setCollections([project.id]);
+	const [{ result }] = await env.importer.run(parseList("[Threshold]\nEC:Bernstein08"), env.options({ collectionID: project.id, eprintActions: [] }));
+	assert.equal(result.status, "exists");
+	assert.equal(result.detail, "added to \u201cThreshold\u201d");
+	assert.deepEqual(paper.getCollections().sort(), [project.id, sub.Threshold.id].sort());
+	assert.equal(result.refiledTo, undefined);
+});
+
+test("reorganizing moves papers within the target collection to the sections the list names", async () => {
+	const { project, sub, make } = await projectCollections("Signatures", "Threshold");
+	const other = await make("Other project");
+	const unfiled = bernstein();
+	unfiled.setCollections([project.id]);
+	const misfiled = libertYung();
+	misfiled.setCollections([sub.Signatures.id, other.id]);
+	const twice = env.Zotero.addItem("conferencePaper", {
+		fields: { title: "Threshold RSA for Dynamic and Ad-Hoc Groups", date: "2008", DOI: "10.1007/978-3-540-78967-3_6" },
+		creators: [{ firstName: "Rosario", lastName: "Gennaro", creatorType: "author" }],
+	});
+	twice.setCollections([project.id]);
+	const unlisted = env.Zotero.addItem("journalArticle", { fields: { title: "Not on the list" } });
+	unlisted.setCollections([sub.Signatures.id]);
+
+	const summary = byRaw(await env.importer.run(parseList(`
+		[Signatures]
+		EC:Bernstein08
+		EC:GHKR08
+		[Threshold]
+		JC:LibYun20
+		EC:GHKR08
+	`), env.options({ collectionID: project.id, reorganize: true, eprintActions: [] })));
+
+	assert.equal(summary["EC:Bernstein08"].status, "moved");
+	assert.equal(summary["EC:Bernstein08"].detail, "moved from \u201cProject\u201d to \u201cSignatures\u201d");
+	assert.deepEqual(unfiled.getCollections(), [sub.Signatures.id]);
+	assert.equal(summary["EC:Bernstein08"].refiledTo, sub.Signatures.id, "its files may follow");
+
+	assert.equal(summary["JC:LibYun20"].status, "moved");
+	assert.deepEqual(misfiled.getCollections().sort(), [other.id, sub.Threshold.id].sort(), "collections outside the project are left alone");
+	assert.equal(summary["JC:LibYun20"].refiledTo, undefined, "another project still holds it, so its files stay");
+
+	assert.deepEqual(twice.getCollections().sort(), [sub.Signatures.id, sub.Threshold.id].sort(), "a paper listed in two sections stays in both");
+	assert.deepEqual(unlisted.getCollections(), [sub.Signatures.id], "papers the list does not name are left alone");
+
+	// Running the same list again changes nothing.
+	const again = await env.importer.run(parseList("[Signatures]\nEC:Bernstein08"), env.options({ collectionID: project.id, reorganize: true, eprintActions: [] }));
+	assert.equal(again[0].result.status, "exists");
+	assert.equal(again[0].result.detail, undefined);
+});
+
+test("a collection is copied as a list with a section per subcollection, which imports back into place", async () => {
+	const { project, sub, make } = await projectCollections("Signatures", "Threshold");
+	const lattice = await make("Lattice", sub.Threshold.id);
+	const unfiled = bernstein();
+	unfiled.setCollections([project.id]);
+	const shared = libertYung();
+	shared.setCollections([sub.Signatures.id, lattice.id]);
+
+	const { text, count } = collectionAsList(env.Zotero, project, { eprintKey: "IACR ePrint", header: "Papers from Zotero: Project" });
+	assert.equal(text, [
+		"# Papers from Zotero: Project",
+		"10.1007/978-3-540-78967-3_5       # Proving Tight Security for Rabin-Williams Signatures",
+		"",
+		"[Signatures]",
+		"10.1007/s00145-020-09350-3        # Adaptively Secure Non-interactive CCA-Secure Threshold Cryptosystems",
+		"",
+		"[Threshold / Lattice]",
+		"10.1007/s00145-020-09350-3        # Adaptively Secure Non-interactive CCA-Secure Threshold Cryptosystems",
+		"",
+	].join("\n"), "empty subcollections are left out");
+	assert.equal(count, 2, "a paper in two sections counts once");
+
+	// Imported into a fresh collection, the list rebuilds the structure.
+	const copy = await make("Copy");
+	const results = await env.importer.run(parseList(text), env.options({ collectionID: copy.id, eprintActions: [] }));
+	assert.deepEqual(results.map((r) => r.result.status), ["exists", "exists"]);
+	assert.ok(env.Zotero.collectionPaths().includes("Copy/Threshold/Lattice"));
+	assert.equal(shared.getCollections().length, 4, "added to the copy's sections as well");
+});
+
+test("ZotMoov moves the files it manages into the folder of the paper's new collection", async () => {
+	const { Zotero } = env;
+	const calls = [];
+	Zotero.Attachments.LINK_MODE_LINKED_FILE = 2;
+	Zotero.ZotMoov = {
+		getBasePrefs: () => ({ into_subfolder: true, subdir_str: "{%c}", preferred_collection: 99 }),
+		async move(attachments, directory, options) {
+			calls.push({ attachments: attachments.map((a) => a.id), directory, options });
+		},
+	};
+	const paper = bernstein();
+	const linked = Zotero.addPDF({ path: "C:/Zotero/Phd/Project/paper.pdf", linked: true, parentItemID: paper.id });
+	linked.attachmentLinkMode = 2;
+	const stored = Zotero.addPDF({ path: "/storage/new.pdf", parentItemID: paper.id });
+	stored.attachmentLinkMode = 0;
+	const files = new ZotMoovFiles({ Zotero, log: () => {} });
+
+	assert.equal(files.available, false, "not without ZotMoov's settings");
+	Zotero.Prefs.set("extensions.zotmoov.dst_dir", "C:/Zotero");
+	Zotero.Prefs.set("extensions.zotmoov.file_behavior", "copy");
+	Zotero.Prefs.set("extensions.zotmoov.enable_subdir_move", true);
+	assert.equal(files.available, false, "not when ZotMoov copies files");
+	Zotero.Prefs.set("extensions.zotmoov.file_behavior", "move");
+	assert.equal(files.available, true);
+
+	assert.equal(await files.moveFiles([{ item: paper, collectionID: 42 }]), 1);
+	assert.deepEqual(calls, [{
+		attachments: [linked.id],
+		directory: "C:/Zotero",
+		options: { into_subfolder: true, subdir_str: "{%c}", preferred_collection: 42 },
+	}], "only the linked file; ZotMoov handles new stored files itself");
 });

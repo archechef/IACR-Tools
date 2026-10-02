@@ -5,23 +5,37 @@
  * to metadata (CryptoBib first, then the ePrint paper page, then Zotero's own
  * DOI lookup, then the ePrint full-text search), checked against the library,
  * and added as an item whose ePrint PDF can be downloaded right away.
+ *
+ * A list with sections ("[Topic]") files its papers into those subcollections
+ * of the target collection, creating them when missing. With `reorganize`,
+ * papers already somewhere in the target collection are moved: out of the
+ * collections below it that the list does not name for them.
  */
 import { eprintPaperFromPage } from "../core/eprint-page.js";
 import { eprintIdOf } from "../core/mapping.js";
 import { EPRINT, PREFS } from "../config.js";
 import { mapConcurrent, serialized, serializedByKey } from "../core/concurrency.js";
+import { relativeCollectionPath } from "../core/list.js";
+import { CollectionPaths } from "./collections.js";
 import { createItemFromEprintPaper, createItemFromRecord } from "./create-item.js";
 import { LibraryIndex } from "./library-index.js";
 
 /**
- * @typedef {"added" | "updated" | "exists" | "not-found" | "failed"} ListStatus
- * @typedef {{ status: ListStatus, item?: any, detail?: string }} ListResult
+ * @typedef {"added" | "updated" | "moved" | "exists" | "not-found" | "failed"} ListStatus
+ * @typedef {object} ListResult
+ * @property {ListStatus} status
+ * @property {any} [item]
+ * @property {string} [detail]
+ * @property {number} [refiledTo]  Set when an existing paper was moved between
+ *   collections and now lives only below the target collection: the collection
+ *   whose folder its files belong in (see zotmoov.js).
  */
 
 /**
  * @typedef {object} ListOptions
  * @property {number} libraryID
  * @property {number | null} collectionID
+ * @property {boolean} [reorganize]  Move papers already below the target collection into the collections the list names.
  * @property {import("./pipeline.js").Action[]} metadataActions  Run on new items (CryptoBib sync).
  * @property {import("./pipeline.js").Action[]} eprintActions    Run on new and on existing items.
  */
@@ -66,7 +80,16 @@ export class ListImporter {
 			// The list import compares papers only, never files.
 			const index = await new LibraryIndex({ Zotero: this.Zotero, files: this.files, eprintKey: this.eprintKey() })
 				.load(options.libraryID, { files: false });
-			const steps = { place: serialized(), perItem: serializedByKey() };
+			const collections = new CollectionPaths(this.Zotero, options.libraryID, options.collectionID);
+			const filing = {
+				collections,
+				basePath: collections.basePath(),
+				// Reorganizing only ever touches the collections below the target.
+				subtree: options.reorganize && options.collectionID ? collections.subtree() : new Set(),
+				/** @type {Map<number, Set<number>>} collections each item was filed into by this run */
+				claims: new Map(),
+			};
+			const steps = { place: serialized(), perItem: serializedByKey(), filing };
 			// Entries are looked up and their PDFs downloaded in parallel; results
 			// are reported as they finish and returned in list order.
 			const summary = await mapConcurrent(entries, this.concurrency(), async (entry) => {
@@ -96,9 +119,9 @@ export class ListImporter {
 	 * and its title, say) would both create it.
 	 * @returns {Promise<ListResult>}
 	 */
-	async #addEntry(entry, options, index, { place, perItem }) {
+	async #addEntry(entry, options, index, { place, perItem, filing }) {
 		const found = await this.#resolve(entry);
-		const { work } = await place(() => this.#place(entry, found, options, index, perItem));
+		const { work } = await place(() => this.#place(entry, found, options, index, perItem, filing));
 		return work;
 	}
 
@@ -110,7 +133,7 @@ export class ListImporter {
 	 * @returns {Promise<{ work: Promise<ListResult> }>} wrapped, so that awaiting
 	 *   this step does not wait for the work itself
 	 */
-	async #place(entry, found, options, index, perItem) {
+	async #place(entry, found, options, index, perItem, filing) {
 		const notFound = () => ({ work: Promise.resolve(/** @type {ListResult} */ ({ status: "not-found", detail: entry.raw })) });
 		let item;
 		let source;
@@ -118,7 +141,7 @@ export class ListImporter {
 		if (found) {
 			item = index.findReference(found.reference, found.eprintId);
 			if (!item) {
-				const context = { libraryID: options.libraryID, collectionID: options.collectionID, eprintKey: this.eprintKey() };
+				const context = { libraryID: options.libraryID, collectionIDs: await this.#targets(entry, options, filing), eprintKey: this.eprintKey() };
 				item = found.record
 					? await createItemFromRecord(this.Zotero, found.record, context)
 					: await createItemFromEprintPaper(this.Zotero, found.paper, context);
@@ -128,7 +151,7 @@ export class ListImporter {
 		}
 		else if (entry.doi) {
 			// Zotero's DOI lookup saves the item itself, so the duplicate check follows afterwards.
-			const translated = await this.#translateDOI(entry.doi, options);
+			const translated = await this.#translateDOI(entry.doi, await this.#targets(entry, options, filing), options);
 			if (!translated) return notFound();
 			item = index.findPaper(translated);
 			if (item) {
@@ -143,10 +166,62 @@ export class ListImporter {
 		else {
 			return notFound();
 		}
-		if (isNew) index.addPaper(item);
+		if (isNew) {
+			index.addPaper(item);
+			this.#claim(item, item.getCollections(), filing);
+		}
+		// An existing paper is filed in its queue, so that its collections are
+		// never saved while another entry's work on the same item still runs.
 		return {
-			work: perItem(item.id, () => (isNew ? this.#processNew(item, source, options) : this.#updateExisting(item, options))),
+			work: perItem(item.id, async () => (isNew
+				? this.#processNew(item, source, options)
+				: this.#updateExisting(item, await this.#file(item, entry, options, filing), options))),
 		};
+	}
+
+	/**
+	 * The collections an entry goes into: those of its sections (created when
+	 * missing), or the target collection.
+	 * @returns {Promise<number[]>}
+	 */
+	async #targets(entry, options, { collections, basePath }) {
+		if (!entry.collections) return options.collectionID ? [options.collectionID] : [];
+		const ids = [];
+		for (const path of entry.collections) {
+			const id = await collections.resolve(relativeCollectionPath(path, basePath));
+			if (id && !ids.includes(id)) ids.push(id);
+		}
+		return ids;
+	}
+
+	/** Records the collections this run filed an item into. */
+	#claim(item, collectionIDs, { claims }) {
+		const claimed = claims.get(item.id) ?? new Set();
+		for (const id of collectionIDs) claimed.add(id);
+		claims.set(item.id, claimed);
+		return claimed;
+	}
+
+	/**
+	 * Puts a paper that is already in the library into the entry's collections
+	 * and, when reorganizing, takes it out of the other collections below the
+	 * target, except those this run filed it into for another entry (a paper
+	 * listed in two sections stays in both).
+	 * @returns {Promise<{ added: number[], removed: number[], refiledTo?: number } | null>} null if nothing changed
+	 */
+	async #file(item, entry, options, filing) {
+		if (item.parentItemID) return null;
+		const targets = await this.#targets(entry, options, filing);
+		const claimed = this.#claim(item, targets, filing);
+		const added = targets.filter((id) => !item.inCollection(id));
+		const removed = item.getCollections().filter((id) => filing.subtree.has(id) && !claimed.has(id));
+		if (!added.length && !removed.length) return null;
+		for (const id of added) item.addToCollection(id);
+		for (const id of removed) item.removeFromCollection(id);
+		await item.saveTx();
+		// Its files may follow only if no collection outside the target still holds the paper.
+		const elsewhere = item.getCollections().some((id) => !filing.subtree.has(id));
+		return { added, removed, refiledTo: removed.length && !elsewhere ? targets[0] : undefined };
 	}
 
 	/** A newly created item: CryptoBib update and ePrint PDF. */
@@ -155,11 +230,33 @@ export class ListImporter {
 		return /** @type {ListResult} */ ({ status: "added", item, detail: [source, detail].filter(Boolean).join(" · ") });
 	}
 
-	/** An entry whose paper is already in the library: only its ePrint PDF may be missing. */
-	async #updateExisting(item, options) {
-		await this.#addToCollection(item, options.collectionID);
+	/**
+	 * An entry whose paper is already in the library: only its ePrint PDF may be
+	 * missing. Its collections were set while placing it.
+	 */
+	async #updateExisting(item, filed, options) {
 		const detail = await this.#runActions(item, options.eprintActions);
-		return /** @type {ListResult} */ ({ status: detail ? "updated" : "exists", item, detail });
+		const where = filed ? this.#describeFiling(filed, options) : undefined;
+		/** @type {ListResult} */
+		const result = {
+			status: filed?.removed.length ? "moved" : detail ? "updated" : "exists",
+			item,
+			detail: [where, detail].filter(Boolean).join(" \u00b7 ") || undefined,
+		};
+		if (filed?.refiledTo) result.refiledTo = filed.refiledTo;
+		return result;
+	}
+
+	/**
+	 * "moved from “A” to “B”" or "added to “B”"; nothing for the plain case of a
+	 * paper added to the target collection, which the status already says.
+	 */
+	#describeFiling({ added, removed }, options) {
+		if (!removed.length && added.every((id) => id === options.collectionID)) return undefined;
+		const paths = new CollectionPaths(this.Zotero, options.libraryID, options.collectionID);
+		const names = (ids) => ids.map((id) => `\u201c${paths.displayName(id)}\u201d`).join(", ");
+		if (!removed.length) return `added to ${names(added)}`;
+		return added.length ? `moved from ${names(removed)} to ${names(added)}` : `removed from ${names(removed)}`;
 	}
 
 	/** @returns {Promise<string | undefined>} details of the actions that changed something */
@@ -169,12 +266,6 @@ export class ListImporter {
 		const detail = results.filter((r) => r.status === "changed" || r.status === "failed")
 			.map((r) => r.detail).filter(Boolean).join(" \u00b7 ");
 		return detail || undefined;
-	}
-
-	async #addToCollection(item, collectionID) {
-		if (!collectionID || item.parentItemID || item.inCollection(collectionID)) return;
-		item.addToCollection(collectionID);
-		await item.saveTx();
 	}
 
 	/**
@@ -253,7 +344,7 @@ export class ListImporter {
 		}
 	}
 
-	async #translateDOI(doi, options) {
+	async #translateDOI(doi, collectionIDs, options) {
 		try {
 			const translate = new this.Zotero.Translate.Search();
 			translate.setIdentifier({ DOI: doi });
@@ -267,7 +358,7 @@ export class ListImporter {
 			});
 			const items = await translate.translate({
 				libraryID: options.libraryID,
-				collections: options.collectionID ? [options.collectionID] : [],
+				collections: collectionIDs,
 				saveAttachments: false,
 			});
 			return items?.[0] ?? null;

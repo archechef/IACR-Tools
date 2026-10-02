@@ -86,6 +86,10 @@ export const PREFS = Object.freeze({
 	folderImportAttachToExisting: { key: "folderImport.attachToExisting", default: true },
 	/** List import: download the ePrint PDF of every paper added from a list. */
 	listDownloadPdf: { key: "listImport.downloadPdf", default: true },
+	/** List import: move papers already in the target collection into the collections the list names. */
+	listReorganize: { key: "listImport.reorganize", default: false },
+	/** List import: after moving papers between collections, let ZotMoov move their files along. */
+	listMoveFilesWithZotMoov: { key: "listImport.moveFilesWithZotMoov", default: true },
 	/** A revised ePrint PDF replaces the old one (moved to the trash) instead of being added next to it. */
 	replaceRevisedEprint: { key: "replaceRevisedEprint", default: false },
 	/** Papers looked up or downloaded at the same time (list import, menu commands). */
@@ -276,6 +280,13 @@ export const LIST = Object.freeze({
 	bibtexPattern: /^[^%]*@[A-Za-z]+\s*[{(]/m,
 	/** Trailing "— Authors, 2019" style annotations after a title. */
 	titleAnnotation: /\s+[–—]\s+.*$/,
+	/**
+	 * A section line, "[Topic]" or "[Topic / Subtopic]": the papers below it go
+	 * into that subcollection of the target collection ("[]": the target itself).
+	 */
+	sectionPattern: /^\[([^[\]]*)\]$/,
+	/** Separators between the levels of a section's collection path ("/" and ">" need spaces, so "PRF/PRP" stays one name). */
+	sectionSeparator: /\s+[/>]\s+|\s*→\s*/,
 	/** At most this many entries per list. */
 	maxEntries: 500,
 	/** Column at which the title comment starts in a written list. */
@@ -284,6 +295,18 @@ export const LIST = Object.freeze({
 	maxCommentLength: 100,
 	/** File types offered by the file picker. */
 	fileFilter: "*.txt; *.md; *.csv; *.bib; *.json",
+});
+
+/** ZotMoov (another plugin) moves attachment files into a folder per collection. */
+export const ZOTMOOV = Object.freeze({
+	/** Its preferences, in Zotero's preference branch. */
+	prefs: Object.freeze({
+		directory: "extensions.zotmoov.dst_dir",
+		fileBehavior: "extensions.zotmoov.file_behavior",
+		subdirectories: "extensions.zotmoov.enable_subdir_move",
+	}),
+	/** The file behaviour under which files are moved (the other one, "copy", leaves copies behind). */
+	moveBehavior: "move",
 });
 
 /** LaTeX: \cite keys and a BibTeX file for the papers that crypto.bib lacks. */

@@ -36,6 +36,28 @@ export function formatList(papers, { header } = {}) {
 	return [...(header ? [`# ${commentText(header)}`] : []), ...lines].join("\n") + (lines.length ? "\n" : "");
 }
 
+/**
+ * A list with sections: the papers of a collection, then one "[Sub / Sub]"
+ * section per subcollection that holds papers, as the import reads them.
+ * @param {Array<{ path: string[], papers: ListPaper[] }>} sections  path [] is the collection itself.
+ * @param {{ header?: string }} [options]
+ * @returns {string}
+ */
+export function formatSections(sections, { header } = {}) {
+	const blocks = [];
+	for (const { path, papers } of sections) {
+		const lines = papers.map(paperLine).filter(Boolean);
+		if (!lines.length) continue;
+		blocks.push([...(path.length ? [sectionLine(path)] : []), ...lines].join("\n"));
+	}
+	return [...(header ? [`# ${commentText(header)}`] : []), blocks.join("\n\n")].filter(Boolean).join("\n") + (blocks.length ? "\n" : "");
+}
+
+/** "[Topic / Subtopic]"; brackets in a name would end the line early. */
+function sectionLine(path) {
+	return `[${path.map((name) => name.replace(/[[\]]/g, "").trim()).join(" / ")}]`;
+}
+
 /** Titles are one-line comments here, so line breaks and "#" have to go. */
 function commentText(title) {
 	const text = (title ?? "").replace(/\s+/g, " ").replace(/#/g, "").trim();

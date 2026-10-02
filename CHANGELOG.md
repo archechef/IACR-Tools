@@ -2,6 +2,13 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **Lists with sections**: in Add Papers from a List, a line `[Topic]` or `[Topic / Subtopic]` files the papers below it into that subcollection of the selected collection, created when missing. A section may repeat the selected collection's path (`[Phd → Project → Topic]`); a paper listed in two sections goes into both.
+- **Reorganizing**: a new checkbox in the paste box moves papers already in the selected collection into the subcollections the list names, out of the others below it. Collections outside it and papers the list does not name are left alone.
+- With ZotMoov installed and set to move files, the files of moved papers follow them into their new collection's folder (preference, on by default).
+- Copy Papers as List on a collection writes a section per subcollection, so the list imports back with its structure.
+
 ## 1.4.1 — 2026-10-01
 
 - Right-click a collection → **IACR**: every paper command (Springer conversion, CryptoBib update, ePrint lookup and download, revision check, preprint update, version links, all of the above), plus Copy Papers as List, Copy LaTeX Citation, Export BibTeX and Find Duplicate Papers. They apply to the collection's papers, including subcollections when Zotero shows their items; on a library, to all its papers after a confirmation. The collection entries that were at the top level moved into this submenu.

@@ -10,7 +10,7 @@ import { ItemWrapper } from "./item.js";
 /**
  * @typedef {object} CreateContext
  * @property {number} libraryID
- * @property {number | null} [collectionID]
+ * @property {number[]} [collectionIDs]
  * @property {string} eprintKey  Extra-field key for the ePrint id.
  */
 
@@ -55,14 +55,14 @@ export function createItemFromEprintPaper(Zotero, paper, context) {
  * @param {string[]} tags
  * @param {CreateContext} context
  */
-async function saveItem(Zotero, data, tags, { libraryID, collectionID = null, eprintKey }) {
+async function saveItem(Zotero, data, tags, { libraryID, collectionIDs = [], eprintKey }) {
 	const item = new Zotero.Item(data.itemType);
 	item.libraryID = libraryID;
 	const wrapper = new ItemWrapper(item, Zotero);
 	applyZoteroData(wrapper, data, { overwrite: true, replaceCreators: true });
 	if (data.eprintId) wrapper.setExtra(eprintKey, data.eprintId);
 	for (const tag of tags) item.addTag(tag);
-	if (collectionID) item.setCollections([collectionID]);
+	if (collectionIDs.length) item.setCollections(collectionIDs);
 	await item.saveTx();
 	return item;
 }

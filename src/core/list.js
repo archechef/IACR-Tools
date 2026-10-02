@@ -3,6 +3,10 @@
  * plugin can look up. Accepts ePrint ids, DOIs, CryptoBib keys, plain titles
  * and BibTeX, so that a list written by hand, exported from a bibliography or
  * produced by an assistant all work.
+ *
+ * A list can be split into sections by lines such as "[Signatures]" or
+ * "[Signatures / Lattice]": the papers below such a line belong in that
+ * subcollection of the collection the list is imported into.
  */
 import { EPRINT, LIST } from "../config.js";
 import { BibtexParser, MacroTable } from "./bibtex.js";
@@ -20,6 +24,10 @@ import { normalizeDOI } from "./text.js";
  * @property {string} [title]   The line's text, when it carries no identifier.
  * @property {string} [hint]    A title given as a comment behind an identifier,
  *                              used when the identifier leads nowhere.
+ * @property {string[][]} [collections]  Only in lists with sections: the
+ *                              collection paths the paper is listed under
+ *                              (several if it is listed in several sections;
+ *                              [] is the target collection itself).
  */
 
 /**
@@ -29,13 +37,20 @@ import { normalizeDOI } from "./text.js";
  */
 export function parseList(text) {
 	const entries = LIST.bibtexPattern.test(text ?? "") ? parseBibtex(text) : parseLines(text);
-	const seen = new Set();
+	/** @type {Map<string, ListEntry>} */
+	const seen = new Map();
 	const unique = [];
 	for (const entry of entries) {
 		const signature = entry.eprintId ?? entry.doi ?? entry.key ?? entry.title?.toLowerCase();
 		if (entry.hint === undefined) delete entry.hint;
-		if (!signature || seen.has(signature)) continue;
-		seen.add(signature);
+		if (!signature) continue;
+		const first = seen.get(signature);
+		if (first) {
+			// A paper listed in two sections belongs in both collections.
+			for (const path of entry.collections ?? []) addPath(first.collections, path);
+			continue;
+		}
+		seen.set(signature, entry);
 		unique.push(entry);
 		if (unique.length >= LIST.maxEntries) break;
 	}
@@ -45,11 +60,72 @@ export function parseList(text) {
 /** @returns {ListEntry[]} */
 function parseLines(text) {
 	const entries = [];
+	/** @type {string[] | null} */
+	let section = null;
 	for (const line of (text ?? "").split(/\r?\n/)) {
-		const entry = parseEntry(line.replace(LIST.bulletPattern, ""));
-		if (entry) entries.push(entry);
+		const cleaned = line.replace(LIST.bulletPattern, "");
+		const path = parseSection(cleaned);
+		if (path) {
+			section = path;
+			continue;
+		}
+		// Not a section, so brackets around the line only wrap an identifier: "[2024/1234]".
+		const entry = parseEntry(cleaned.replace(/^\s*\[([^[\]]*)\]\s*$/, "$1"));
+		if (entry) entries.push({ ...entry, collections: [section ?? []] });
 	}
+	// Without sections, entries carry no collections: they go where the import goes.
+	if (!section) for (const entry of entries) delete entry.collections;
 	return entries;
+}
+
+/**
+ * A section line: "[Topic]", "[Topic / Subtopic]" or "[Phd → Project → Topic]",
+ * optionally with a comment. "[]" returns to the target collection itself. A
+ * bracketed identifier such as "[2024/1234]" is a paper, not a section.
+ * @param {string} line
+ * @returns {string[] | null} the collection path
+ */
+export function parseSection(line) {
+	const comment = LIST.commentPattern.exec(line ?? "");
+	const text = (comment ? line.slice(0, comment.index) : line ?? "").trim();
+	const match = LIST.sectionPattern.exec(text);
+	if (!match) return null;
+	const entry = parseEntry(match[1]);
+	if (entry && !entry.title) return null;
+	return match[1].split(LIST.sectionSeparator).map((name) => name.replace(/\s+/g, " ").trim()).filter(Boolean);
+}
+
+/** Adds a collection path unless it is already there (names compared as Zotero users see them). */
+function addPath(paths, path) {
+	const key = (p) => JSON.stringify(p.map(collectionNameKey));
+	if (paths && !paths.some((p) => key(p) === key(path))) paths.push(path);
+}
+
+/**
+ * Collection names are compared without regard to case and spacing, so
+ * "Lattice signatures" in a list finds the collection "Lattice Signatures".
+ * @param {string} name
+ */
+export function collectionNameKey(name) {
+	return name.normalize("NFC").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+/**
+ * A section's path relative to the collection the list is imported into. The
+ * path may repeat that collection and its parents ("Phd → Project → Topic"
+ * imported into "Phd → Project"); that part is dropped, so a list works
+ * whether it names the full path or only the topic.
+ * @param {string[]} path
+ * @param {string[]} basePath  Names from the library root to the target collection.
+ * @returns {string[]}
+ */
+export function relativeCollectionPath(path, basePath) {
+	const same = (a, b) => collectionNameKey(a) === collectionNameKey(b);
+	for (let length = Math.min(path.length, basePath.length); length > 0; length--) {
+		const tail = basePath.slice(basePath.length - length);
+		if (tail.every((name, i) => same(name, path[i]))) return path.slice(length);
+	}
+	return path;
 }
 
 /**

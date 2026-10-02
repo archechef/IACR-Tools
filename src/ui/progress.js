@@ -266,7 +266,7 @@ export class BatchProgress {
 }
 
 /** Fluent-safe names for the list-import statuses. */
-const LIST_COUNTS = Object.freeze({ added: "added", updated: "updated", exists: "exists", "not-found": "notFound", failed: "failed" });
+const LIST_COUNTS = Object.freeze({ added: "added", updated: "updated", moved: "moved", exists: "exists", "not-found": "notFound", failed: "failed" });
 
 /**
  * Progress of adding the papers of a reading list: one row per paper and a
@@ -276,7 +276,7 @@ export class ListProgress extends BatchProgress {
 	/** @param {ProgressView} [view] */
 	constructor(Zotero, l10n, view) {
 		super(Zotero, l10n, "progress-add-list", view);
-		this.counts = { added: 0, updated: 0, exists: 0, notFound: 0, failed: 0 };
+		this.counts = { added: 0, updated: 0, moved: 0, exists: 0, notFound: 0, failed: 0 };
 	}
 
 	/**

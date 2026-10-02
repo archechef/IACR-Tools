@@ -274,6 +274,9 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.equal(pasted[0].url, `chrome://${PLUGIN.chromePackage}/content/list-dialog.xhtml`, "the paste box is opened from the chrome package");
 	assert.match(pasted[0].io.text, /EC:GHKR08/, "pre-filled from the clipboard");
 	assert.match(pasted[0].io.description, /"target":"Crypto"/, "the destination is named");
+	assert.equal(pasted[0].io.showReorganize, true, "a collection can be reorganized");
+	assert.match(pasted[0].io.reorganizeLabel, /list-reorganize .*"target":"Crypto"/);
+	assert.equal(env.Zotero.Prefs.get(`${PLUGIN.prefBranch}listImport.reorganize`), false, "the unticked box is remembered");
 	// The library already holds this paper (it was processed above), so the list
 	// updates it instead of adding a second item, and fetches its ePrint PDF.
 	const matching = (await env.Zotero.Items.getAll(1)).filter((item) => item.isRegularItem?.() && item.getField("citationKey") === "EC:GHKR08");

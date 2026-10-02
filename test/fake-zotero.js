@@ -117,6 +117,16 @@ export class FakeItem {
 		this.collections = new Set(ids);
 	}
 
+	/** Mirrors Zotero.Item#removeFromCollection (saved with the next save). */
+	removeFromCollection(id) {
+		this.collections.delete(id);
+	}
+
+	/** Mirrors Zotero.Item#getCollections: the ids of the collections the item is directly in. */
+	getCollections() {
+		return [...this.collections];
+	}
+
 	inCollection(id) {
 		return this.collections.has(id);
 	}

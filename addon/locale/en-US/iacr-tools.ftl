@@ -136,11 +136,12 @@ iacr-tools-list-confirm = { $count ->
         [one] it
        *[other] them
     } to “{ $target }”? Papers that are already in your library are left alone.
-iacr-tools-list-dialog-description = One paper per line: an ePrint id (2024/1234), a DOI, a CryptoBib key or a title. Text after # is a comment. Papers are added to “{ $target }”; those already in your library are left alone.
+iacr-tools-list-dialog-description = One paper per line: an ePrint id (2024/1234), a DOI, a CryptoBib key or a title. Text after # is a comment. Papers are added to “{ $target }”; those already in your library are left alone. A line such as [Topic] or [Topic / Subtopic] puts the papers below it into that subcollection, created if needed.
 iacr-tools-list-cancel = Cancel
 iacr-tools-list-accept = Add Papers
 iacr-tools-list-choose-file = Use a File Instead…
 iacr-tools-list-download-pdf = Download the ePrint PDF of each paper
+iacr-tools-list-reorganize = Move papers already in “{ $target }” into the subcollections the list names
 iacr-tools-list-running = Looking up { $count ->
         [one] one paper
        *[other] { $count } papers
@@ -148,10 +149,15 @@ iacr-tools-list-running = Looking up { $count ->
 iacr-tools-progress-add-list = Adding papers from a list
 iacr-tools-list-status-added = added
 iacr-tools-list-status-updated = already in library, updated
+iacr-tools-list-status-moved = already in library, moved
 iacr-tools-list-status-exists = already in library
 iacr-tools-list-status-not-found = not found
 iacr-tools-list-status-failed = failed
-iacr-tools-list-summary = { $added } added, { $updated } updated, { $exists } already in library, { $notFound } not found, { $failed } failed
+iacr-tools-list-summary = { $added } added, { $updated } updated, { $moved } moved, { $exists } already in library, { $notFound } not found, { $failed } failed
+iacr-tools-list-moving-files = ZotMoov is moving the files of { $count ->
+        [one] one paper
+       *[other] { $count } papers
+    }…
 
 ## Copying papers out
 
@@ -306,6 +312,10 @@ iacr-tools-pref-import-download-eprint =
     .label = Also download the ePrint PDF
 
 iacr-tools-pref-list-heading = Add Papers from a List
-iacr-tools-pref-list-description = File → Add Papers from a List… reads a list of papers from the clipboard or a file: one ePrint id (2024/1234), DOI, CryptoBib key (EC:Bernstein08) or paper title per line, or a BibTeX bibliography. Lines starting with # are ignored.
+iacr-tools-pref-list-description = File → Add Papers from a List… reads a list of papers from the clipboard or a file: one ePrint id (2024/1234), DOI, CryptoBib key (EC:Bernstein08) or paper title per line, or a BibTeX bibliography. Lines starting with # are ignored. A line [Topic] or [Topic / Subtopic] files the papers below it in that subcollection of the selected collection.
 iacr-tools-pref-list-download =
     .label = Download the ePrint PDF of each paper added from a list
+iacr-tools-pref-list-reorganize =
+    .label = Move papers already in the selected collection into the subcollections the list names
+iacr-tools-pref-list-zotmoov =
+    .label = Let ZotMoov move the files of papers moved between collections (when ZotMoov is installed and set to move files)

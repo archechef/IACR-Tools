@@ -9,7 +9,7 @@ import { createCryptoBibSyncAction } from "./zotero/cryptobib-sync.js";
 import { EprintActions, storedEprintId } from "./zotero/eprint.js";
 import { FolderImporter } from "./zotero/folder-import.js";
 import { ListImporter } from "./zotero/list-import.js";
-import { itemsAsList } from "./zotero/list-export.js";
+import { collectionAsList, itemsAsList } from "./zotero/list-export.js";
 import { parseList } from "./core/list.js";
 import { cryptoBibSource, dblpSource, EprintFinder, iacrSearchSource } from "./zotero/eprint-sources.js";
 import { ItemWrapper } from "./zotero/item.js";
@@ -21,6 +21,7 @@ import { Pipeline } from "./zotero/pipeline.js";
 import { createGeckoFileStore, createZoteroHttp } from "./zotero/platform.js";
 import { Prefs } from "./zotero/prefs.js";
 import { convertSpringerAction } from "./zotero/springer.js";
+import { ZotMoovFiles } from "./zotero/zotmoov.js";
 import { registerEprintColumn, unregisterEprintColumn } from "./ui/column.js";
 import { L10n } from "./ui/l10n.js";
 import { registerMenus, unregisterMenus } from "./ui/menus.js";
@@ -139,6 +140,7 @@ export class IACRTools {
 			suspendAutoProcessing: () => this.autoProcessor.suspend(),
 			log: this.log,
 		});
+		this.zotmoov = new ZotMoovFiles({ Zotero, log: this.log });
 		this.folderImporter = new FolderImporter({
 			Zotero,
 			files,
@@ -347,7 +349,9 @@ export class IACRTools {
 	/**
 	 * File menu / collection context menu: adds the papers of a reading list —
 	 * pasted into the plugin's own box, or read from a file — and downloads
-	 * their ePrint PDFs.
+	 * their ePrint PDFs. Sections of the list ("[Topic]") go into
+	 * subcollections; optionally, papers already in the collection are moved
+	 * into the subcollections the list names, and ZotMoov moves their files.
 	 */
 	async addPapersFromList(context) {
 		const { Zotero, l10n, prefs } = this;
@@ -360,21 +364,24 @@ export class IACRTools {
 		this.log(`List target: library ${libraryID}, collection ${collection ? `"${collection.name}"` : "none"} (from ${source})`);
 		const target = collection?.name ?? Zotero.Libraries.get(libraryID)?.name ?? "";
 
-		const list = await this.#collectList(window, title, target);
+		const list = await this.#collectList(window, title, target, Boolean(collection));
 		if (!list) return;
 		prefs.set("listDownloadPdf", list.download);
+		if (collection) prefs.set("listReorganize", list.reorganize);
 
 		const progress = this.#openProgress((view) => new ListProgress(Zotero, l10n, view));
 		progress.setTotal(list.entries.length);
 		try {
 			await this.#preloadCryptoBib(progress);
 			progress.status("list-running", { count: list.entries.length });
-			await this.listImporter.run(list.entries, {
+			const summary = await this.listImporter.run(list.entries, {
 				libraryID,
 				collectionID: collection?.id ?? null,
+				reorganize: Boolean(collection) && list.reorganize,
 				metadataActions: prefs.get("autoSyncCryptoBib") ? [this.actions.sync] : [],
 				eprintActions: [list.download ? this.actions.downloadEprint : this.actions.findEprint],
 			}, { onEntryDone: (entry, result) => progress.entryDone(entry, result), shouldStop: () => progress.stopRequested });
+			await this.#moveRefiledFiles(summary, progress);
 			progress.finish();
 		}
 		catch (e) {
@@ -383,17 +390,29 @@ export class IACRTools {
 		}
 	}
 
+	/** Papers the list import moved between collections: ZotMoov moves their files along. */
+	async #moveRefiledFiles(summary, progress) {
+		const papers = summary.filter(({ result }) => result.refiledTo)
+			.map(({ result }) => ({ item: result.item, collectionID: result.refiledTo }));
+		if (!papers.length || !this.prefs.get("listMoveFilesWithZotMoov") || !this.zotmoov.available) return;
+		progress.status("list-moving-files", { count: papers.length });
+		const moved = await this.zotmoov.moveFiles(papers);
+		this.log(`ZotMoov moved ${moved} files of ${papers.length} papers`);
+	}
+
 	/**
 	 * The paste box: pre-filled from the clipboard, with "Use a File Instead…"
 	 * loading a list from disk. Falls back to clipboard plus a confirmation
 	 * when the box cannot be opened.
-	 * @returns {Promise<{ entries: import("./core/list.js").ListEntry[], download: boolean } | null>}
+	 * @param {boolean} inCollection  Whether the list goes into a collection (which can be reorganized).
+	 * @returns {Promise<{ entries: import("./core/list.js").ListEntry[], download: boolean, reorganize: boolean } | null>}
 	 */
-	async #collectList(window, title, target) {
+	async #collectList(window, title, target, inCollection) {
 		const { l10n, prefs } = this;
 		const clipboard = this.#clipboardText();
 		let text = parseList(clipboard).length ? clipboard : "";
 		let download = Boolean(prefs.get("listDownloadPdf"));
+		let reorganize = inCollection && Boolean(prefs.get("listReorganize"));
 
 		for (let round = 0; round < 8; round++) {
 			let answer;
@@ -405,8 +424,11 @@ export class IACRTools {
 					fileLabel: l10n.format("list-choose-file"),
 					cancelLabel: l10n.format("list-cancel"),
 					downloadLabel: l10n.format("list-download-pdf"),
+					reorganizeLabel: l10n.format("list-reorganize", { target }),
+					showReorganize: inCollection,
 					text,
 					download,
+					reorganize,
 					action: "cancel",
 					loaded: false,
 				});
@@ -418,6 +440,7 @@ export class IACRTools {
 
 			text = answer.text ?? "";
 			download = Boolean(answer.download);
+			reorganize = inCollection && Boolean(answer.reorganize);
 			if (answer.action === "cancel") return null;
 			if (answer.action === "file") {
 				const path = await this.dialogs.pickFile(window, l10n.format("list-pick-file"), LIST.fileFilter);
@@ -425,13 +448,13 @@ export class IACRTools {
 				continue;
 			}
 			const entries = parseList(text);
-			if (entries.length) return { entries, download };
+			if (entries.length) return { entries, download, reorganize };
 			this.dialogs.alert(window, title, l10n.format("list-empty"));
 		}
 		return null;
 	}
 
-	/** Without the paste box: the clipboard (or a file) and a plain confirmation. */
+	/** Without the paste box: the clipboard (or a file) and a plain confirmation; nothing is reorganized. */
 	async #collectListFromClipboard(window, title, target, clipboard, download) {
 		const { l10n } = this;
 		let entries = parseList(clipboard);
@@ -456,7 +479,7 @@ export class IACRTools {
 			answer = ask(undefined);
 			if (!answer.confirmed) return null;
 		}
-		return { entries, download: answer.checked };
+		return { entries, download: answer.checked, reorganize: false };
 	}
 
 	/**
@@ -466,12 +489,16 @@ export class IACRTools {
 	 * @param {string} [sourceName] Where the papers come from, for the header line.
 	 */
 	copyAsList(items, sourceName) {
-		const { Zotero, l10n } = this;
-		const text = itemsAsList(Zotero, items ?? [], {
+		const text = itemsAsList(this.Zotero, items ?? [], {
 			eprintKey: String(this.prefs.get("eprintExtraKey")),
-			header: l10n.format("copy-header", { source: sourceName ?? "" }),
+			header: this.l10n.format("copy-header", { source: sourceName ?? "" }),
 		});
-		const count = text.split("\n").filter((line) => line && !line.startsWith("#")).length;
+		return this.#copyList(text, text.split("\n").filter((line) => line && !line.startsWith("#")).length);
+	}
+
+	/** Puts a list on the clipboard and says how many papers it holds. */
+	#copyList(text, count) {
+		const { Zotero, l10n } = this;
 		if (!count) {
 			this.dialogs.alert(Zotero.getMainWindow(), l10n.format("copy-title"), l10n.format("copy-empty"));
 			return 0;
@@ -482,10 +509,22 @@ export class IACRTools {
 		return count;
 	}
 
-	/** The same, for every paper in a collection. */
+	/**
+	 * The same, for a collection: its subcollections become sections
+	 * ("[Topic]"), so the list can be imported back with its structure. For a
+	 * library, every paper in one list.
+	 */
 	async copyCollectionAsList(context) {
-		const { items, name } = await this.collectionPapers(context);
-		return this.copyAsList(items, name);
+		const { collection } = resolveImportTarget(this.Zotero, context);
+		if (!collection) {
+			const { items, name } = await this.collectionPapers(context);
+			return this.copyAsList(items, name);
+		}
+		const { text, count } = collectionAsList(this.Zotero, collection, {
+			eprintKey: String(this.prefs.get("eprintExtraKey")),
+			header: this.l10n.format("copy-header", { source: collection.name }),
+		});
+		return this.#copyList(text, count);
 	}
 
 	/**
