@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.5.0 — 2026-10-02
 
 - **Lists with sections**: in Add Papers from a List, a line `[Topic]` or `[Topic / Subtopic]` files the papers below it into that subcollection of the selected collection, created when missing. A section may repeat the selected collection's path (`[Phd → Project → Topic]`); a paper listed in two sections goes into both.
 - **Reorganizing**: a new checkbox in the paste box moves papers already in the selected collection into the subcollections the list names, out of the others below it. Collections outside it and papers the list does not name are left alone.
