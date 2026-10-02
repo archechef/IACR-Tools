@@ -232,6 +232,10 @@ export class IACRTools {
 					close: l10n.format("progress-close"),
 					problemsOnly: l10n.format("progress-problems-only"),
 					noProblems: l10n.format("progress-no-problems"),
+					done: l10n.format("progress-outcome-done"),
+					problems: l10n.format("progress-outcome-problems"),
+					stopped: l10n.format("progress-outcome-stopped"),
+					failed: l10n.format("progress-outcome-failed"),
 				},
 				fallback: () => new ToastView(Zotero),
 			}));

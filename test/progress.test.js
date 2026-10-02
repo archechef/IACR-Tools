@@ -4,7 +4,10 @@ import assert from "node:assert/strict";
 import { DialogView, ListProgress } from "../src/ui/progress.js";
 
 const l10n = { format: (id, args) => (args ? `${id} ${JSON.stringify(args)}` : id) };
-const labels = { stop: "Stop", stopping: "Stopping…", close: "Close", problemsOnly: "Show only problems", noProblems: "No problems." };
+const labels = {
+	stop: "Stop", stopping: "Stopping…", close: "Close", problemsOnly: "Show only problems", noProblems: "No problems.",
+	done: "Done", problems: "Done, with problems", stopped: "Stopped", failed: "Failed",
+};
 
 /** A DialogView over a fake parent window; `toasts` collects fallback pop-ups. */
 function openView() {

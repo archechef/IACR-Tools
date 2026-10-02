@@ -76,6 +76,10 @@ iacr-tools-progress-stopped = Stopped; the remaining papers were left alone.
 iacr-tools-progress-close = Close
 iacr-tools-progress-problems-only = Show only problems
 iacr-tools-progress-no-problems = No problems.
+iacr-tools-progress-outcome-done = Done
+iacr-tools-progress-outcome-problems = Done, with problems
+iacr-tools-progress-outcome-stopped = Stopped
+iacr-tools-progress-outcome-failed = Failed
 
 iacr-tools-status-changed = updated
 iacr-tools-status-unchanged = unchanged

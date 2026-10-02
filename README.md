@@ -119,7 +119,7 @@ Elsewhere:
 
 - **Tools → Update CryptoBib Database**: fetches the latest export.
 - **Tools → Find Duplicate Papers…**: the duplicate report for the library.
-- Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background.
+- Long runs (imports, menu commands) report in a window of their own, listing every paper; **Stop** starts no new papers, **Close** lets the run finish in the background. When the run is over, a badge next to the title says how it ended (*Done*, *Done, with problems*, *Stopped* or *Failed*), the bar takes its colour, the window title starts with a matching mark (✓ when all went well), and a window left in the background flashes in the taskbar.
 - **New items** (e.g. saved from Springer Link with the Zotero Connector) are converted, updated from CryptoBib and linked with their other version in the library automatically. ePrint lookup and download, and turning published preprints into the published paper, can be enabled in the preferences. Items that arrive through sync, and batches of more than 100 items, are left alone.
 
 CryptoBib (~40 MB) is downloaded on first use into `<Zotero data dir>/iacr-tools/`. It is refreshed after 30 days, in the background.

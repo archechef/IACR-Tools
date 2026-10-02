@@ -48,8 +48,39 @@
 		byId("empty").hidden = !(problemsOnly.checked && state.finished && !problems);
 	}
 
+	/** How a finished run ended, or null while it runs. */
+	function outcomeOf(state) {
+		if (!state.finished) return null;
+		if (state.failed) return "failed";
+		if (state.stopRequested) return "stopped";
+		return state.rows.some((row) => row.kind === "error") ? "problems" : "done";
+	}
+
+	const ICONS = { done: "✓", problems: "!", stopped: "■", failed: "✕" };
+	let shownOutcome = null;
+
+	/** The badge next to the headline, the bar's colour and the window title say how the run ended. */
+	function renderOutcome(state) {
+		const outcome = outcomeOf(state);
+		const badge = byId("outcome");
+		badge.hidden = !outcome;
+		document.body.dataset.outcome = outcome ?? "";
+		document.title = outcome ? `${ICONS[outcome]} ${state.headline} — ${labels[outcome] ?? ""}` : state.headline;
+		if (!outcome) return;
+		byId("outcome-icon").textContent = ICONS[outcome];
+		byId("outcome-label").textContent = labels[outcome] ?? "";
+		if (shownOutcome) return;
+		shownOutcome = outcome;
+		// A run finishing in the background flashes the window in the taskbar.
+		try {
+			if (!document.hasFocus()) window.getAttention?.();
+		}
+		catch {
+			// Not offered by every window; the badge is enough then.
+		}
+	}
+
 	function renderHeader(state) {
-		document.title = state.headline;
 		byId("headline").textContent = state.headline;
 		byId("status").textContent = state.message ? `${state.status} ${state.message}` : state.status;
 		const bar = byId("bar");
@@ -69,6 +100,7 @@
 		stop.disabled = state.stopRequested;
 		stop.textContent = state.stopRequested ? labels.stopping : labels.stop;
 		document.body.classList.toggle("finished", state.finished);
+		renderOutcome(state);
 		updateEmpty(state);
 	}
 

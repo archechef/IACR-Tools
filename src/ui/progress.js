@@ -105,7 +105,8 @@ export class DialogView {
 	/**
 	 * @param {object} deps
 	 * @param {any} deps.parentWindow  Window that opens the dialog.
-	 * @param {Record<"stop" | "stopping" | "close" | "problemsOnly" | "noProblems", string>} deps.labels
+	 * @param {Record<"stop" | "stopping" | "close" | "problemsOnly" | "noProblems" | "done" | "problems" | "stopped" | "failed", string>} deps.labels
+	 *   The last four name the outcome shown when the run has finished.
 	 * @param {() => ToastView} deps.fallback  Shows the outcome if the window was closed before the end.
 	 */
 	constructor({ parentWindow, labels, fallback }) {
