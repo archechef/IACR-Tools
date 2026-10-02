@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.6.1 — 2026-10-02
 
 - **Download Missing PDFs in Browser…** (IACR → ePrint & PDFs) for publishers that only let browsers in, such as the ACM Digital Library, which turns away the plugin and Zotero's Find Full Text alike: the papers' PDF links open in your browser, five at a time, and every PDF you save to your Downloads folder is attached to its paper (matched by the DOI or title in its file name) while the progress window is open. The folder can be set in the preferences.
 
