@@ -213,6 +213,37 @@ test("the ePrint version is found, stored in Extra and downloaded once", async (
 	assert.equal(item.attachments.length, 1);
 });
 
+test("items know their citation key and whether a PDF (or EPUB) is attached outside the trash", async () => {
+	const item = env.Zotero.addItem("conferencePaper", { fields: { title: "A Paper", extra: "Citation Key: EC:Doe08" } });
+	const wrapper = new ItemWrapper(item, env.Zotero);
+	assert.equal(wrapper.citationKey, "EC:Doe08");
+	assert.equal(new ItemWrapper(env.Zotero.addItem("conferencePaper", { fields: { title: "No Key" } }), env.Zotero).citationKey, "");
+
+	const attach = (contentType) => env.Zotero.Attachments.importFromURL({ parentItemID: item.id, url: "https://example.org/x", title: "File", contentType });
+	assert.equal(wrapper.hasPDF({ epub: true }), false);
+	await attach("application/epub+zip");
+	assert.equal(wrapper.hasPDF(), false);
+	assert.equal(wrapper.hasPDF({ epub: true }), true);
+	const pdf = await attach("application/pdf");
+	assert.equal(wrapper.hasPDF(), true);
+	pdf.deleted = true;
+	assert.equal(wrapper.hasPDF(), false);
+});
+
+test("runOnItem reports the details of the actions that changed something or failed", async () => {
+	const item = env.Zotero.addItem("conferencePaper", { fields: { title: "A Paper" } });
+	const action = (id, run) => ({ id, run });
+	const detail = await env.pipeline.runOnItem(item, [
+		action("a", async () => ({ status: "changed", detail: "stored 2008/045" })),
+		action("b", async () => ({ status: "unchanged", detail: "up to date" })),
+		action("c", async () => {
+			throw new Error("offline");
+		}),
+	]);
+	assert.equal(detail, "stored 2008/045 · offline");
+	assert.equal(await env.pipeline.runOnItem(item, []), undefined);
+});
+
 test("online sources are used when CryptoBib has no ePrint entry", async () => {
 	const http = createFakeHttp({
 		json: {

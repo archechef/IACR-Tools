@@ -226,7 +226,7 @@ export class ListImporter {
 
 	/** A newly created item: CryptoBib update and ePrint PDF. */
 	async #processNew(item, source, options) {
-		const detail = await this.#runActions(item, [...options.metadataActions, ...options.eprintActions]);
+		const detail = await this.pipeline.runOnItem(item, [...options.metadataActions, ...options.eprintActions]);
 		return /** @type {ListResult} */ ({ status: "added", item, detail: [source, detail].filter(Boolean).join(" · ") });
 	}
 
@@ -235,7 +235,7 @@ export class ListImporter {
 	 * missing. Its collections were set while placing it.
 	 */
 	async #updateExisting(item, filed, options) {
-		const detail = await this.#runActions(item, options.eprintActions);
+		const detail = await this.pipeline.runOnItem(item, options.eprintActions);
 		const where = filed ? this.#describeFiling(filed, options) : undefined;
 		/** @type {ListResult} */
 		const result = {
@@ -257,15 +257,6 @@ export class ListImporter {
 		const names = (ids) => ids.map((id) => `\u201c${paths.displayName(id)}\u201d`).join(", ");
 		if (!removed.length) return `added to ${names(added)}`;
 		return added.length ? `moved from ${names(removed)} to ${names(added)}` : `removed from ${names(removed)}`;
-	}
-
-	/** @returns {Promise<string | undefined>} details of the actions that changed something */
-	async #runActions(item, actions) {
-		if (!actions.length) return undefined;
-		const [{ results } = { results: [] }] = await this.pipeline.run([item], actions);
-		const detail = results.filter((r) => r.status === "changed" || r.status === "failed")
-			.map((r) => r.detail).filter(Boolean).join(" \u00b7 ");
-		return detail || undefined;
 	}
 
 	/**

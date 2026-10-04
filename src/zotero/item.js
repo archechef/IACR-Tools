@@ -111,6 +111,11 @@ export class ItemWrapper {
 		return normalizeDOI(this.getField("DOI") || this.getExtra(EXTRA.doi));
 	}
 
+	/** The citation key: the dedicated field, else "Citation Key: …" in Extra; "" if none. */
+	get citationKey() {
+		return this.getField("citationKey") || this.getExtra(EXTRA.citationKey) || "";
+	}
+
 	/**
 	 * Stores the citation key in the dedicated field when the Zotero schema has
 	 * it, otherwise as "Citation Key: …" in Extra (understood by Better BibTeX).
@@ -133,6 +138,15 @@ export class ItemWrapper {
 			year: Number.isFinite(year) ? year : undefined,
 			doi: this.doi || undefined,
 		};
+	}
+
+	/**
+	 * Whether the item has a PDF attachment that is not in the trash. With
+	 * `epub`, an EPUB counts too (Zotero's Find Full Text then does nothing).
+	 */
+	hasPDF({ epub = false } = {}) {
+		return this.Zotero.Items.get(this.item.getAttachments())
+			.some((attachment) => !attachment.deleted && (attachment.isPDFAttachment?.() || (epub && attachment.isEPUBAttachment?.())));
 	}
 
 	/**

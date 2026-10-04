@@ -34,7 +34,7 @@ export class DoiPdfAction {
 	async #run(context) {
 		const { item } = context;
 		const parent = item.item;
-		if (hasFullText(this.Zotero, parent)) return result.unchanged("PDF already attached");
+		if (item.hasPDF({ epub: true })) return result.unchanged("PDF already attached");
 		const doi = item.doi;
 		if (!doi) return result.skipped("no DOI");
 		const eprintId = await this.eprintIdOf(context);
@@ -60,17 +60,6 @@ export class DoiPdfAction {
 			}
 		});
 	}
-}
-
-/**
- * Whether an item already has a PDF or EPUB (Zotero's Find Full Text then
- * does nothing either).
- * @param {any} Zotero
- * @param {any} item  A regular Zotero item.
- */
-export function hasFullText(Zotero, item) {
-	return Zotero.Items.get(item.getAttachments())
-		.some((attachment) => !attachment.deleted && (attachment.isPDFAttachment?.() || attachment.isEPUBAttachment?.()));
 }
 
 /** "link.springer.com" from a URL, or the URL itself. */

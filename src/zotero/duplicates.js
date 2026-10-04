@@ -5,7 +5,7 @@
  * version, link the versions of a paper as related items, or remember that a
  * group is not the same paper.
  */
-import { DUPLICATES, EPRINT, EXTRA, LIST } from "../config.js";
+import { DUPLICATES, EPRINT, LIST } from "../config.js";
 import { findDuplicateGroups } from "../core/duplicates.js";
 import { storedEprintId } from "./eprint.js";
 import { ItemWrapper } from "./item.js";
@@ -61,7 +61,7 @@ export class DuplicateFinder {
 			year,
 			doi,
 			eprintId: storedEprintId(wrapper, eprintKey),
-			citationKey: wrapper.getField("citationKey") || wrapper.getExtra(EXTRA.citationKey) || "",
+			citationKey: wrapper.citationKey,
 			venue: wrapper.getField("publicationTitle") || wrapper.getField("conferenceName") || wrapper.getField("repository"),
 			attachments: item.getAttachments().length,
 			dateAdded: item.dateAdded ?? "",
@@ -77,7 +77,7 @@ export class DuplicateFinder {
 	 * @returns {Promise<{ papers: number, groups: ReportGroup[] }>}
 	 */
 	async find(libraryID, { scope = null } = {}) {
-		const eprintKey = String(this.prefs.get("eprintExtraKey"));
+		const eprintKey = this.prefs.eprintKey();
 		const items = (await this.Zotero.Items.getAll(libraryID, false, false))
 			.filter((item) => item.isRegularItem() && !item.deleted);
 		const papers = items.map((item) => this.#paper(item, eprintKey));
@@ -143,7 +143,7 @@ export class DuplicateFinder {
 		const target = this.mergeTargets(group).find((paper) => paper.id === targetID);
 		if (!target) throw new Error("The published version to keep is no longer in the library");
 		const preprints = group.clusters.flat().filter((paper) => isPreprint(paper) && !paper.item.deleted);
-		const eprintKey = String(this.prefs.get("eprintExtraKey"));
+		const eprintKey = this.prefs.eprintKey();
 		const kept = new ItemWrapper(target.item, this.Zotero);
 		const eprintId = target.eprintId ?? preprints.map((paper) => paper.eprintId).find(Boolean);
 		if (eprintId && !kept.getExtra(eprintKey)) {

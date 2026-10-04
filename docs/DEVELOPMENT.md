@@ -115,9 +115,9 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | File | Purpose |
 |---|---|
 | `platform.js` | the only adapters to Zotero.HTTP and IOUtils/PathUtils (`Http`, `FileStore`) |
-| `prefs.js` | typed preferences over `PREFS` in config.js |
-| `item.js` | `ItemWrapper`: base-field resolution, Extra fallback, type conversion, related items; all item edits go through it |
-| `pipeline.js` | actions, `ItemContext`, `Pipeline` |
+| `prefs.js` | typed preferences over `PREFS` in config.js (`eprintKey()`: the Extra key of ePrint ids) |
+| `item.js` | `ItemWrapper`: base-field resolution, Extra fallback, type conversion, related items, citation key, attached PDFs; all item edits go through it |
+| `pipeline.js` | actions, `ItemContext`, `Pipeline` (`runOnItem`: one item, the details worth reporting) |
 | `springer.js`, `cryptobib-sync.js`, `eprint.js`, `versions.js` | the actions (Springer conversion; CryptoBib sync; ePrint find / download / revision check; preprint upgrade / version links) |
 | `eprint-sources.js` | ePrint lookup sources (CryptoBib, dblp, eprint.iacr.org search) behind one interface |
 | `cryptobib-store.js` | download, validation, cache, lazy index |

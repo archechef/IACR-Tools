@@ -42,6 +42,11 @@ export class Prefs {
 		return value === undefined ? PREFS[name].default : value;
 	}
 
+	/** The Extra-field key under which ePrint ids are stored ("IACR ePrint" by default). */
+	eprintKey() {
+		return String(this.get("eprintExtraKey"));
+	}
+
 	/** @param {PrefName} name */
 	set(name, value) {
 		this.Zotero.Prefs.set(Prefs.fullKey(name), value, true);

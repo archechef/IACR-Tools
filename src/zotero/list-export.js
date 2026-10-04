@@ -3,7 +3,7 @@
  * list import reads — so a selection can travel to a chat and its answer can
  * come straight back.
  */
-import { EXTRA, LIST } from "../config.js";
+import { LIST } from "../config.js";
 import { formatList, formatSections } from "../core/list-format.js";
 import { storedEprintId } from "./eprint.js";
 import { ItemWrapper } from "./item.js";
@@ -19,7 +19,7 @@ export function papersFromItems(Zotero, items, eprintKey) {
 	for (const item of items ?? []) {
 		if (!item?.isRegularItem?.() || item.deleted) continue;
 		const wrapper = new ItemWrapper(item, Zotero);
-		const citationKey = wrapper.getField("citationKey") || wrapper.getExtra(EXTRA.citationKey) || "";
+		const citationKey = wrapper.citationKey;
 		papers.push({
 			eprintId: storedEprintId(wrapper, eprintKey) ?? undefined,
 			doi: wrapper.doi || undefined,

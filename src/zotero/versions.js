@@ -18,8 +18,6 @@ const titleOf = (item) => `“${item.getDisplayTitle()}”`;
  * @returns {{ upgrade: import("./pipeline.js").Action, link: import("./pipeline.js").Action }}
  */
 export function createVersionActions(prefs) {
-	const eprintKey = () => String(prefs.get("eprintExtraKey"));
-
 	/** Links an item with the other version of its paper, if the library has it. */
 	const link = Object.freeze({
 		id: "link-versions",
@@ -57,7 +55,7 @@ export function createVersionActions(prefs) {
 				return added ? result.changed(`${detail} (linked)`) : result.unchanged(detail);
 			}
 
-			const key = eprintKey();
+			const key = prefs.eprintKey();
 			const eprintId = storedEprintId(item, key);
 			if (eprintId) item.setExtra(key, eprintId);
 			// Fields that describe the preprint only: Zotero would carry the archive's

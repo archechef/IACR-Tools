@@ -231,6 +231,10 @@ class FakeAttachment {
 		return this.contentType === "application/pdf";
 	}
 
+	isEPUBAttachment() {
+		return this.contentType === "application/epub+zip";
+	}
+
 	async saveTx() {
 		this.saveCount++;
 	}

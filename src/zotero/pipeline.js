@@ -117,6 +117,18 @@ export class Pipeline {
 		return summary.filter(Boolean);
 	}
 
+	/**
+	 * Runs the actions on a single item.
+	 * @param {any} item Zotero item
+	 * @param {Action[]} actions
+	 * @returns {Promise<string | undefined>} the details of the actions that changed something or failed
+	 */
+	async runOnItem(item, actions) {
+		const [{ results } = { results: [] }] = await this.run([item], actions);
+		return results.filter((r) => r.status === "changed" || r.status === "failed")
+			.map((r) => r.detail).filter(Boolean).join(" · ") || undefined;
+	}
+
 	async #runOne(action, context) {
 		try {
 			return await action.run(context);

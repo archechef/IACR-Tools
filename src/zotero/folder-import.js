@@ -16,6 +16,7 @@ import { FOLDER_IMPORT } from "../config.js";
 import { identifyInCryptoBib } from "../core/pdf-text.js";
 import { CollectionPaths } from "./collections.js";
 import { createItemFromRecord } from "./create-item.js";
+import { ItemWrapper } from "./item.js";
 import { LibraryIndex } from "./library-index.js";
 
 /**
@@ -193,7 +194,7 @@ export class FolderImporter {
 		const existing = plan.index.findPaper(parent);
 		if (existing) {
 			await this.#addToCollection(existing, collectionID);
-			if (options.attachToExisting && !this.#hasPDF(existing)) {
+			if (options.attachToExisting && !new ItemWrapper(existing, this.Zotero).hasPDF()) {
 				attachment.parentID = existing.id;
 				await attachment.saveTx();
 				await this.Zotero.Items.trashTx([parent.id]);
@@ -204,9 +205,8 @@ export class FolderImporter {
 		}
 
 		plan.index.addPaper(parent);
-		const [{ results } = { results: [] }] = await this.pipeline.run([parent], options.eprintActions);
-		const detail = results.filter((r) => r.status === "changed" || r.status === "failed").map((r) => r.detail).filter(Boolean).join(" · ");
-		return { status: "imported", item: parent, detail: detail || undefined };
+		const detail = await this.pipeline.runOnItem(parent, options.eprintActions);
+		return { status: "imported", item: parent, detail };
 	}
 
 	/** Zotero's "Retrieve Metadata for PDF"; returns the new parent item. */
@@ -242,10 +242,6 @@ export class FolderImporter {
 		attachment.parentID = item.id;
 		await attachment.saveTx();
 		return item;
-	}
-
-	#hasPDF(item) {
-		return this.Zotero.Items.get(item.getAttachments()).some((a) => a.isPDFAttachment?.());
 	}
 
 	async #addToCollection(item, collectionID) {

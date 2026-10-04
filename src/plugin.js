@@ -7,7 +7,7 @@ import { AutoProcessor } from "./zotero/auto-processor.js";
 import { CryptoBibStore } from "./zotero/cryptobib-store.js";
 import { createCryptoBibSyncAction } from "./zotero/cryptobib-sync.js";
 import { BrowserDownloads } from "./zotero/browser-download.js";
-import { DoiPdfAction, hasFullText } from "./zotero/doi-pdf.js";
+import { DoiPdfAction } from "./zotero/doi-pdf.js";
 import { EprintActions, storedEprintId } from "./zotero/eprint.js";
 import { FolderImporter } from "./zotero/folder-import.js";
 import { ListImporter } from "./zotero/list-import.js";
@@ -105,7 +105,7 @@ export class IACRTools {
 			cryptoBibSource(this.store),
 			...(this.prefs.get("useOnlineEprintSearch") ? [dblpSource(http), iacrSearchSource(http)] : []),
 		], this.log);
-		const eprintKey = () => String(this.prefs.get("eprintExtraKey"));
+		const eprintKey = () => this.prefs.eprintKey();
 		const eprint = new EprintActions({ Zotero, prefs: this.prefs, finder, http, md5: (path) => files.md5(path) });
 		const viaDoi = new DoiPdfAction({ Zotero, eprintIdOf: (context) => eprint.eprintIdOf(context), timers });
 		const versions = createVersionActions(this.prefs);
@@ -510,7 +510,7 @@ export class IACRTools {
 	 */
 	copyAsList(items, sourceName) {
 		const text = itemsAsList(this.Zotero, items ?? [], {
-			eprintKey: String(this.prefs.get("eprintExtraKey")),
+			eprintKey: this.prefs.eprintKey(),
 			header: this.l10n.format("copy-header", { source: sourceName ?? "" }),
 		});
 		return this.#copyList(text, text.split("\n").filter((line) => line && !line.startsWith("#")).length);
@@ -542,7 +542,7 @@ export class IACRTools {
 		}
 		const { text, count } = collectionAsList(this.Zotero, collection, {
 			subcollections: Boolean(this.prefs.get("collectionsIncludeSubcollections")),
-			eprintKey: String(this.prefs.get("eprintExtraKey")),
+			eprintKey: this.prefs.eprintKey(),
 			header: this.l10n.format("copy-header", { source: collection.name }),
 		});
 		return this.#copyList(text, count);
@@ -783,8 +783,9 @@ export class IACRTools {
 	papersMissingPdf(items) {
 		const papers = [];
 		for (const item of items) {
-			if (!item?.isRegularItem?.() || item.deleted || hasFullText(this.Zotero, item)) continue;
+			if (!item?.isRegularItem?.() || item.deleted) continue;
 			const wrapper = new ItemWrapper(item, this.Zotero);
+			if (wrapper.hasPDF({ epub: true })) continue;
 			const doi = wrapper.doi;
 			if (!doi || this.eprintIdOf(item)) continue;
 			papers.push({ item, doi, title: wrapper.getField("title") });
@@ -822,7 +823,7 @@ export class IACRTools {
 
 	/** @returns {string | null} */
 	eprintIdOf(item) {
-		return storedEprintId(new ItemWrapper(item, this.Zotero), String(this.prefs.get("eprintExtraKey")));
+		return storedEprintId(new ItemWrapper(item, this.Zotero), this.prefs.eprintKey());
 	}
 
 	eprintIdsOf(items) {

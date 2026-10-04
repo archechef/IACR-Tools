@@ -152,9 +152,4 @@ export class LibraryIndex {
 		const query = { ...wrapper.reference, doi: undefined };
 		return bestMatch(query, others, { yearTolerance: null })?.candidate.item ?? null;
 	}
-
-	/** Whether the item has a PDF attachment. */
-	hasPDF(item) {
-		return this.Zotero.Items.get(item.getAttachments()).some((a) => a.isPDFAttachment?.());
-	}
 }

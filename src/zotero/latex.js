@@ -8,7 +8,7 @@
  * installed, else the item's own citation key, else the key Zotero's BibTeX
  * export makes up.
  */
-import { EPRINT, EXTRA, LATEX } from "../config.js";
+import { EPRINT, LATEX } from "../config.js";
 import { BibtexParser } from "../core/bibtex.js";
 import { storedEprintId } from "./eprint.js";
 import { ItemWrapper } from "./item.js";
@@ -40,7 +40,7 @@ export class LatexSupport {
 	 */
 	cryptoBibKey(index, item) {
 		const wrapper = new ItemWrapper(item, this.Zotero);
-		const own = wrapper.getField("citationKey") || wrapper.getExtra(EXTRA.citationKey);
+		const own = wrapper.citationKey;
 		if (own && index.getByKey(own)) return own;
 		if (wrapper.itemType === EPRINT.itemType) {
 			const id = storedEprintId(wrapper, this.eprintKey());
@@ -95,7 +95,7 @@ export class LatexSupport {
 		const pinned = this.Zotero.BetterBibTeX?.KeyManager?.get?.(item.id)?.citationKey;
 		if (pinned) return pinned;
 		const wrapper = new ItemWrapper(item, this.Zotero);
-		const own = wrapper.getField("citationKey") || wrapper.getExtra(EXTRA.citationKey);
+		const own = wrapper.citationKey;
 		if (own) return own;
 		const [entry] = BibtexParser.parseAll(await this.exportBibTeX([item]));
 		return entry?.key || null;

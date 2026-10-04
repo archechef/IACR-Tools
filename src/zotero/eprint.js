@@ -48,7 +48,7 @@ export class EprintActions {
 	}
 
 	get #extraKey() {
-		return String(this.prefs.get("eprintExtraKey"));
+		return this.prefs.eprintKey();
 	}
 
 	/**
