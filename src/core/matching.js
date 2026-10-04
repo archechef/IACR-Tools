@@ -58,6 +58,7 @@ export function scoreCandidate(query, candidate, { yearTolerance = MATCHING.year
 		? Math.max(MATCHING.titleSimilarity, titleSimilarity(query.title, candidate.title))
 		: titleSimilarity(query.title, candidate.title);
 	if (similarity < requiredSimilarity) return null;
+	if (similarity < 1 && !extendsTitle && overlap !== null && overlap < MATCHING.fuzzyTitleAuthorOverlap) return null;
 
 	const score = overlap === null ? similarity : (similarity + overlap) / 2;
 	return { score, method: similarity === 1 ? "title" : "fuzzy-title" };

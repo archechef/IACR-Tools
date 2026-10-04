@@ -149,6 +149,13 @@ export const MATCHING = Object.freeze({
 	titleSimilarityWithoutAuthors: 0.95,
 	/** Fraction of author last names that must overlap. */
 	authorOverlap: 0.5,
+	/**
+	 * Author overlap required when the titles only match fuzzily: a different title
+	 * and a different author list together mean a different paper ("On the Provable
+	 * Security of (EC)DSA Signatures" by Fersch, Kiltz, Poettering is not "Limits in
+	 * the Provable Security of ECDSA Signatures" by Hartmann, Kiltz).
+	 */
+	fuzzyTitleAuthorOverlap: 0.75,
 	/** Accept a published-version match whose year differs by at most this much. */
 	yearTolerance: 1,
 	/** Version notes that differ between the ePrint, proceedings and full versions of a paper. */

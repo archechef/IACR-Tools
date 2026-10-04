@@ -150,6 +150,15 @@ test("a title extended by a subtitle matches when the authors agree", () => {
 	assert.equal(bestMatch({ title: published, authors: [] }, [eprint], { yearTolerance: null }), null);
 });
 
+test("a similar title with partly different authors is a different paper", () => {
+	const eprint = { title: "Limits in the Provable Security of ECDSA Signatures", authors: ["Hartmann", "Kiltz"] };
+	const query = { title: "On the Provable Security of (EC)DSA Signatures", authors: ["Fersch", "Kiltz", "Poettering"] };
+	assert.equal(bestMatch(query, [eprint], { yearTolerance: null }), null);
+	// The same title tolerates a changed author list, a similar one a subset of it.
+	assert.equal(bestMatch({ ...query, title: eprint.title }, [eprint], { yearTolerance: null })?.method, "title");
+	assert.equal(bestMatch({ ...query, authors: ["Kiltz"] }, [{ ...eprint, title: "On the Provable Security of ECDSA Signature" }], { yearTolerance: null })?.method, "fuzzy-title");
+});
+
 test("version notes do not prevent title matches", () => {
 	assert.equal(titleKey("Threshold RSA (Extended Abstract)"), titleKey("Threshold RSA"));
 	assert.equal(titleKey("Threshold RSA: Full Version."), titleKey("Threshold RSA"));
