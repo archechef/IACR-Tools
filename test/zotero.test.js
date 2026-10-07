@@ -322,6 +322,28 @@ test("menu commands download several ePrint PDFs at once, one task per item", as
 	for (const item of items) assert.equal(item.attachments.length, 1);
 });
 
+test("a refused ePrint PDF download points to the browser download", async () => {
+	const item = env.Zotero.addItem("preprint", { fields: { title: "Blocked", url: "https://eprint.iacr.org/2024/777" } });
+	const { Attachments } = env.Zotero;
+	const importFromURL = Attachments.importFromURL;
+	Attachments.importFromURL = async () => {
+		throw Object.assign(new Error("HTTP 403"), { status: 403 });
+	};
+	try {
+		const [{ results }] = await env.pipeline.run([item], [env.eprint.download]);
+		assert.equal(results[0].status, "failed");
+		assert.match(results[0].detail, /^2024\/777: eprint\.iacr\.org only lets web browsers .*Download Missing PDFs in Browser/);
+		Attachments.importFromURL = async () => {
+			throw new Error("network down");
+		};
+		const [{ results: other }] = await env.pipeline.run([item], [env.eprint.download]);
+		assert.equal(other[0].detail, "network down", "other errors are reported as they are");
+	}
+	finally {
+		Attachments.importFromURL = importFromURL;
+	}
+});
+
 test("new items are processed automatically, synced ones are left alone", async () => {
 	const auto = new AutoProcessor({
 		Zotero: env.Zotero,

@@ -345,13 +345,13 @@ iacr-tools-pref-list-doi-pdf =
     .label = When downloading, fetch the PDF via the DOI for papers without an ePrint version
 
 iacr-tools-pref-browser-heading = Download Missing PDFs in Browser
-iacr-tools-pref-browser-description = For publishers that only let web browsers in, such as the ACM Digital Library: the plugin opens the papers' PDF links in your browser and attaches the PDFs you save to this folder.
+iacr-tools-pref-browser-description = For sites that only let web browsers download PDFs, such as the IACR ePrint archive and the ACM Digital Library: the plugin opens the papers' PDF links in your browser and attaches the PDFs you save to this folder.
 iacr-tools-pref-browser-folder = Folder your browser saves downloads to (empty: your Downloads folder):
 
 ## Downloading in the browser
 
 iacr-tools-browser-title = Download Missing PDFs in Browser
-iacr-tools-browser-nothing = None of these papers is missing a PDF that the browser could fetch: this is for papers with a DOI but no PDF and no ePrint version. (Papers with an ePrint version get their PDF with Download ePrint PDF.)
+iacr-tools-browser-nothing = None of these papers is missing a PDF that the browser could fetch: this is for papers without a PDF that have an ePrint version or a DOI.
 iacr-tools-browser-no-folder = The folder your browser saves downloads to was not found{ $folder ->
         [none] {""}
        *[other] {" "}({ $folder })

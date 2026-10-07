@@ -89,13 +89,19 @@ export class EprintActions {
 		if (this.#hasAttachment(item, [pdfURL, eprintPageURL(found.id)])) {
 			return result.unchanged(`${found.id}: PDF already attached`);
 		}
-		await this.Zotero.Attachments.importFromURL({
-			libraryID: item.libraryID,
-			parentItemID: item.id,
-			url: pdfURL,
-			title: EPRINT.attachmentTitle,
-			contentType: EPRINT.pdfContentType,
-		});
+		try {
+			await this.Zotero.Attachments.importFromURL({
+				libraryID: item.libraryID,
+				parentItemID: item.id,
+				url: pdfURL,
+				title: EPRINT.attachmentTitle,
+				contentType: EPRINT.pdfContentType,
+			});
+		}
+		catch (e) {
+			if (isBlocked(e)) return result.failed(`${found.id}: ${EPRINT.blockedDetail}`);
+			throw e;
+		}
 		return result.changed(found.id);
 	}
 
@@ -135,13 +141,20 @@ export class EprintActions {
 		const known = recorded ? Date.parse(recorded) : attachmentTime(current[0]);
 		if (Number.isFinite(known) && Date.parse(revised) <= known) return result.unchanged(`${id}: up to date`);
 
-		const fresh = await this.Zotero.Attachments.importFromURL({
-			libraryID: parent.libraryID,
-			parentItemID: parent.id,
-			url: pdfURL,
-			title: EPRINT.attachmentTitle,
-			contentType: EPRINT.pdfContentType,
-		});
+		let fresh;
+		try {
+			fresh = await this.Zotero.Attachments.importFromURL({
+				libraryID: parent.libraryID,
+				parentItemID: parent.id,
+				url: pdfURL,
+				title: EPRINT.attachmentTitle,
+				contentType: EPRINT.pdfContentType,
+			});
+		}
+		catch (e) {
+			if (isBlocked(e)) return result.failed(`${id}: ${EPRINT.blockedDetail}`);
+			throw e;
+		}
 		item.setExtra(versionKey, revised);
 		const day = revised.slice(0, 10);
 		if (await this.#sameFile(fresh, current[0])) {
@@ -170,6 +183,11 @@ export class EprintActions {
 		}));
 		return Boolean(x) && x === y;
 	}
+}
+
+/** Whether a download was refused by the archive's Cloudflare check (HTTP 403). */
+function isBlocked(error) {
+	return error?.status === 403 || /\b403\b|forbidden/i.test(String(error?.message ?? error));
 }
 
 /** When an attachment was added (Zotero stores "YYYY-MM-DD HH:MM:SS" in UTC). */

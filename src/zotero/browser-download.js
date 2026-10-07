@@ -1,7 +1,7 @@
 /**
  * Downloads in the user's own browser, for publishers that turn away programs
- * (ACM's Digital Library answers every request that is not a person's browser
- * with a Cloudflare check). The links are opened in the browser, a few at a
+ * (ACM's Digital Library and the IACR ePrint archive's PDFs answer every
+ * request that is not a person's browser with a Cloudflare check). The links are opened in the browser, a few at a
  * time; the user saves each PDF as usual, and every new PDF that appears in
  * the Downloads folder is attached to its paper. Nothing here gets past such
  * a check by itself: the browser and the person at it do.
@@ -11,13 +11,14 @@
  * open at that moment; otherwise it is reported and left alone.
  */
 import { BROWSER_DOWNLOAD } from "../config.js";
-import { browserPdfURL, paperForFileName } from "../core/downloads.js";
+import { paperForFileName, paperLink } from "../core/downloads.js";
 
 /**
  * @typedef {object} BrowserPaper
  * @property {any} item  The Zotero item.
- * @property {string} doi
+ * @property {string} doi  May be empty for a paper with an ePrint id.
  * @property {string} title
+ * @property {string} [eprintId]  Papers with one are fetched from eprint.iacr.org, which only lets browsers download PDFs.
  */
 
 /**
@@ -71,7 +72,7 @@ export class BrowserDownloads {
 			while (open.length < BROWSER_DOWNLOAD.maxOpen && queue.length) {
 				const paper = queue.shift();
 				open.push(paper);
-				this.openURL(browserPdfURL(paper.doi));
+				this.openURL(paperLink(paper));
 			}
 			onWaiting(open.length + queue.length);
 		};

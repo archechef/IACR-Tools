@@ -2,6 +2,10 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- The IACR ePrint archive now puts a Cloudflare check in front of its PDFs, so downloading them from Zotero no longer works (pages and search do). **Download Missing PDFs in Browser…** now also takes papers with an ePrint version: their `eprint.iacr.org/YYYY/NNN.pdf` links open in your browser and the PDFs you save are attached (matched by the number or id in the file name). **Download ePrint PDF** and **Check for Revised PDF** say what is going on when the archive refuses them, instead of a generic error.
+
 ## 1.6.2 — 2026-10-04
 
 - Fixed papers getting the PDF and ePrint link of a different paper with a similar title and a shared author, such as "On the Provable Security of (EC)DSA Signatures" (Fersch, Kiltz, Poettering), which received ePrint 2023/914, "Limits in the Provable Security of ECDSA Signatures" (Hartmann, Kiltz). A title that only roughly matches now needs nearly the same authors; such pairs are no longer reported as duplicates either.

@@ -91,15 +91,15 @@ The item's URL is not tried, since it is often not the paper's own page. A paper
 
 It runs in three places: **IACR → ePrint & PDFs → Download PDF via DOI (Papers Without ePrint Version)** on papers or a collection; **Add Papers from a List** when PDFs are downloaded (preference, on by default); and on new items (preference, off by default, as a publisher may show a CAPTCHA at any time).
 
-### Publishers that only let browsers in (ACM)
+### Sites that only let browsers in (ePrint PDFs, ACM)
 
-The ACM Digital Library answers every request that does not come from a person's web browser with a Cloudflare check ("Just a moment…"), even for open-access papers, so neither the plugin nor Zotero's Find Full Text can fetch from it. For such papers, **IACR → ePrint & PDFs → Download Missing PDFs in Browser…** (on papers or a collection) lets your own browser do the fetching:
+Since October 2026 the IACR ePrint archive answers every request for a **PDF** that does not come from a person's web browser with a Cloudflare check ("Just a moment…"); paper pages and search are not affected, so finding versions and importing metadata still work, but **Download ePrint PDF** and **Check for Revised PDF** are refused (the progress window says so). The ACM Digital Library does the same for all its requests, even for open-access papers, so neither the plugin nor Zotero's Find Full Text can fetch from it. For such papers, **IACR → ePrint & PDFs → Download Missing PDFs in Browser…** (on papers or a collection) lets your own browser do the fetching:
 
-1. It takes the papers that have a DOI but no PDF and no ePrint version, and asks before doing anything.
-2. It opens their PDF links in your web browser, five at a time — for ACM straight at the PDF (`dl.acm.org/doi/pdf/<DOI>`), for other publishers at the DOI's page.
+1. It takes the papers that have no PDF and have an ePrint version or a DOI, and asks before doing anything.
+2. It opens their PDF links in your web browser, five at a time — for an ePrint version straight at the PDF (`eprint.iacr.org/YYYY/NNN.pdf`), for ACM at `dl.acm.org/doi/pdf/<DOI>`, for other publishers at the DOI's page. The Cloudflare check appears in your browser too, but usually only once per browser session: once you have passed it, the other links open directly.
 3. You save each PDF as usual. While the progress window is open, the plugin watches your Downloads folder: every new PDF is attached to its paper (a copy, named as Zotero names files; ZotMoov then files it), and the next link opens.
 
-A downloaded file is matched to its paper by its name — ACM names its PDFs after the DOI (`3576915.3623096.pdf`), many publishers after the title — or, if its name says nothing (`fulltext.pdf`), to the only paper whose link is still open. A file that could belong to several papers is listed as *not matched*; drag it onto its paper. Files that were in the folder before are ignored, and the originals stay in Downloads. Waiting ends when every paper has its PDF, when you press **Stop**, or after 15 minutes without a new download; papers left over are listed as *not downloaded*.
+A downloaded file is matched to its paper by its name — ePrint PDFs are saved as the last part of the link (`001.pdf` for 2024/001; `2024-001.pdf` and `eprint_2024_001.pdf` work too), ACM names its PDFs after the DOI (`3576915.3623096.pdf`), many publishers after the title — or, if its name says nothing (`fulltext.pdf`), to the only paper whose link is still open. A file that could belong to several papers is listed as *not matched*; drag it onto its paper. Files that were in the folder before are ignored, and the originals stay in Downloads. Waiting ends when every paper has its PDF, when you press **Stop**, or after 15 minutes without a new download; papers left over are listed as *not downloaded*.
 
 If your browser saves somewhere other than your Downloads folder, set that folder in the preferences.
 

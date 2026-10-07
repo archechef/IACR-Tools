@@ -213,6 +213,14 @@ export const EPRINT = Object.freeze({
 		title: "div > strong:first-child",
 		link: "a.paperlink",
 	},
+	/**
+	 * Since October 2026 eprint.iacr.org answers requests for PDFs that do not
+	 * come from a web browser with a Cloudflare check (HTTP 403, cf-mitigated:
+	 * challenge); pages and search are not affected. Said when a download is refused.
+	 */
+	blockedDetail: "eprint.iacr.org only lets web browsers download PDFs: use IACR → ePrint & PDFs → Download Missing PDFs in Browser…",
+	/** A PDF saved from "…/2024/001.pdf" is named after the last part of the link only. */
+	bareNumberFilePattern: /^(\d{1,5})\.pdf$/i,
 	attachmentTitle: "IACR ePrint Full Text PDF",
 	/** Title of an older ePrint PDF kept next to a revised one. */
 	olderAttachmentTitle: (date) => `IACR ePrint Full Text PDF (version of ${date})`,

@@ -6,7 +6,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 
 import { BROWSER_DOWNLOAD } from "../src/config.js";
-import { browserPdfURL, paperForFileName } from "../src/core/downloads.js";
+import { browserPdfURL, paperForFileName, paperLink } from "../src/core/downloads.js";
 import { BrowserDownloads } from "../src/zotero/browser-download.js";
 import { createFakeZotero } from "./fake-zotero.js";
 
@@ -28,6 +28,22 @@ test("a downloaded file is matched to its paper by the DOI or the title in its n
 	assert.equal(paperForFileName("fulltext.pdf", papers), null);
 	assert.equal(paperForFileName("download (3).pdf", papers), null);
 	assert.equal(paperForFileName("Practical.pdf", papers), null, "too little of a title");
+});
+
+test("ePrint papers open at their PDF and are matched by the id or number in the file name", () => {
+	const a = { doi: "", eprintId: "2024/001", title: "Alpha" };
+	const b = { doi: "10.1145/1.1", eprintId: "2023/045", title: "Beta" };
+	assert.equal(paperLink(a), "https://eprint.iacr.org/2024/001.pdf");
+	assert.equal(paperLink(b), "https://eprint.iacr.org/2023/045.pdf", "the ePrint PDF wins over the DOI");
+	assert.equal(paperLink(acm), browserPdfURL(acm.doi));
+	const papers = [a, b, acm];
+	assert.equal(paperForFileName("001.pdf", papers), a, "a browser names the file after the last part of the link");
+	assert.equal(paperForFileName("45.pdf", papers), b);
+	assert.equal(paperForFileName("2023-045.pdf", papers), b);
+	assert.equal(paperForFileName("eprint_2024_001.pdf", papers), a);
+	assert.equal(paperForFileName("002.pdf", papers), null);
+	assert.equal(paperForFileName("001.pdf", [a, { doi: "", eprintId: "2023/001", title: "Gamma" }]), null, "the same number in two years is ambiguous");
+	assert.equal(paperForFileName("001.pdf", [{ doi: "10.1145/2.2", title: "Delta" }]), null, "papers without an ePrint id are not matched by number");
 });
 
 /** A Downloads folder in memory; `save(name)` is the browser saving a file. */

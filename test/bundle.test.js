@@ -410,14 +410,14 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	await listItem.onCommand(null, {});
 	assert.match(asked.at(-1).text, /list-confirm .*"count":1/, "fallback confirmation shown");
 
-	// Download Missing PDFs in Browser: only papers with a DOI, no PDF and no
-	// ePrint version; it says where it waits for the files before opening anything.
+	// Download Missing PDFs in Browser: papers without a PDF that have a DOI or
+	// an ePrint version (opened at its eprint.iacr.org PDF); it says where it waits for the files before opening anything.
 	const acmPaper = env.Zotero.addItem("conferencePaper", { fields: { title: "An ACM Paper", DOI: "10.1145/3576915.3623096" } });
 	const withEprint = env.Zotero.addItem("conferencePaper", { fields: { title: "Has ePrint", DOI: "10.1145/1.1", extra: "IACR ePrint: 2008/045" } });
 	const withPdf = env.Zotero.addItem("conferencePaper", { fields: { title: "Has PDF", DOI: "10.1145/1.2" } });
 	env.Zotero.addPDF({ path: "/storage/has.pdf", parentItemID: withPdf.id });
-	assert.deepEqual(JSON.parse(JSON.stringify(plugin.papersMissingPdf([acmPaper, withEprint, withPdf]).map((p) => p.doi))), ["10.1145/3576915.3623096"]);
-	await plugin.downloadInBrowser([withEprint, withPdf]);
+	assert.deepEqual(JSON.parse(JSON.stringify(plugin.papersMissingPdf([acmPaper, withEprint, withPdf]).map((p) => [p.doi, p.eprintId]))), [["10.1145/3576915.3623096", null], ["10.1145/1.1", "2008/045"]]);
+	await plugin.downloadInBrowser([withPdf]);
 	assert.match(asked.at(-1).text, /browser-nothing/);
 	env.Zotero.Prefs.set(`${PLUGIN.prefBranch}browserDownload.folder`, join(dataDir, "no-such-folder"));
 	await plugin.downloadInBrowser([acmPaper]);

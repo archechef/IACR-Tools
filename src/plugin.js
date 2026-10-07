@@ -725,11 +725,11 @@ export class IACRTools {
 	}
 
 	/**
-	 * IACR → ePrint & PDFs → Download Missing PDFs in Browser…: for papers that
-	 * have a DOI but neither a PDF nor an ePrint version, opens their PDF links
+	 * IACR → ePrint & PDFs → Download Missing PDFs in Browser…: for papers
+	 * without a PDF that have an ePrint version or a DOI, opens their PDF links
 	 * in the user's browser and attaches the PDFs saved to the Downloads folder
-	 * while the progress window is open. For publishers such as ACM, whose
-	 * site only lets browsers in.
+	 * while the progress window is open. For eprint.iacr.org and publishers such
+	 * as ACM, whose sites only let browsers download PDFs.
 	 * @param {any[]} items
 	 */
 	async downloadInBrowser(items) {
@@ -775,8 +775,8 @@ export class IACRTools {
 	}
 
 	/**
-	 * Papers with a DOI, no PDF and no recorded ePrint version (those get the
-	 * ePrint PDF instead).
+	 * Papers without a PDF that have an ePrint version (its PDF is fetched from
+	 * eprint.iacr.org) or else a DOI.
 	 * @param {any[]} items
 	 * @returns {import("./zotero/browser-download.js").BrowserPaper[]}
 	 */
@@ -786,9 +786,10 @@ export class IACRTools {
 			if (!item?.isRegularItem?.() || item.deleted) continue;
 			const wrapper = new ItemWrapper(item, this.Zotero);
 			if (wrapper.hasPDF({ epub: true })) continue;
-			const doi = wrapper.doi;
-			if (!doi || this.eprintIdOf(item)) continue;
-			papers.push({ item, doi, title: wrapper.getField("title") });
+			const doi = wrapper.doi ?? "";
+			const eprintId = this.eprintIdOf(item) ?? undefined;
+			if (!doi && !eprintId) continue;
+			papers.push({ item, doi, eprintId, title: wrapper.getField("title") });
 		}
 		return papers;
 	}

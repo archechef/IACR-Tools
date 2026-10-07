@@ -105,7 +105,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `eprint-page.js` | metadata and revision time from an ePrint paper page's meta tags |
 | `extra.js` | `Key: value` lines in Zotero's Extra field |
 | `pdf-text.js` | DOIs / ePrint ids in PDF text and file names; identifying a PDF in CryptoBib |
-| `downloads.js` | browser downloads: the link to open for a DOI, and which paper a downloaded file's name names |
+| `downloads.js` | browser downloads: the link to open for a paper (ePrint PDF or DOI), and which paper a downloaded file's name names |
 | `list.js`, `list-format.js` | reading lists: parse (including `[Section]` lines and collection paths) and write (flat, or with a section per subcollection) |
 | `duplicates.js` | grouping papers into copies and versions |
 | `concurrency.js` | `mapConcurrent` (bounded parallelism, stoppable), `serialized`, `serializedByKey` |
@@ -261,5 +261,6 @@ The GitHub Actions are pinned to commit hashes (with the version as a comment); 
 - **Reorganizing with a list** only moves the papers the list names; nothing removes a paper the list leaves out. The ZotMoov hand-off depends on ZotMoov's internal methods (`move`, `getBasePrefs`) and does nothing if they change.
 - **List sections** are not read from BibTeX lists.
 - **The ACM Digital Library** (`dl.acm.org`) answers every non-browser request, including `doi.org` redirects to it, with HTTP 403 and a Cloudflare challenge page (`cf-mitigated: challenge`, checked October 2026). Only a person's browser gets through, hence the browser download. Matching its files relies on the file name (the DOI's suffix for ACM); a renamed download whose name says nothing is only matched when one link is open.
+- **ePrint PDFs** (`eprint.iacr.org/YYYY/NNN.pdf`, also the `/archive/…` and versioned URLs, whatever the User-Agent) answer non-browser requests with HTTP 403 and a Cloudflare challenge (`cf-mitigated: challenge`, checked October 2026); pages, search and the RSS feed are not challenged. `download-eprint` and `check-eprint-revision` therefore report a refusal (`EPRINT.blockedDetail`) and the browser download fetches those PDFs. A browser saves `…/2024/001.pdf` as `001.pdf`, which matches a paper by its number alone when no other open paper has that number. The attachment imported from a file has no URL, so the revision check does not see it as an ePrint PDF. If IACR lifts the check, the direct download works again unchanged.
 - **Browser downloads** only see the folder they watch: a browser set to ask where to save, or to open PDFs without saving them, needs the user to save into that folder.
 - **Only an English locale** (`en-US`); another language is a new `.ftl` file under `addon/locale/<locale>/`.
