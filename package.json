@@ -1,6 +1,6 @@
 {
   "name": "zotero-iacr-tools",
-  "version": "1.6.2",
+  "version": "1.6.3",
   "description": "Zotero plugin integrating the IACR ecosystem: Springer conference papers, CryptoBib metadata and ePrint versions",
   "repository": {
     "type": "git",

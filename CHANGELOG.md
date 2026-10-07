@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.6.3 — 2026-10-07
 
 - The IACR ePrint archive now puts a Cloudflare check in front of its PDFs, so downloading them from Zotero no longer works (pages and search do). **Download Missing PDFs in Browser…** now also takes papers with an ePrint version: their `eprint.iacr.org/YYYY/NNN.pdf` links open in your browser and the PDFs you save are attached (matched by the number or id in the file name). **Download ePrint PDF** and **Check for Revised PDF** say what is going on when the archive refuses them, instead of a generic error.
 
