@@ -2,7 +2,7 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
-## Unreleased
+## 1.7.0 — 2026-10-08
 
 - **Link Project Folder…** (IACR menu of a collection) connects a LaTeX project folder to its collection: `refs/papers` becomes a link (a directory junction on Windows) to the folder ZotMoov files the collection's PDFs in, and Better BibTeX keeps `refs/references.bib` updated with the collection's papers. It asks first and never replaces what is there.
 
