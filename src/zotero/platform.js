@@ -3,7 +3,7 @@
  * the plugin depends on these interfaces only, which keeps it testable outside
  * Zotero.
  */
-import { NETWORK } from "../config.js";
+import { NETWORK, PROJECT_FOLDER } from "../config.js";
 
 /**
  * @typedef {object} Http
@@ -19,6 +19,7 @@ import { NETWORK } from "../config.js";
  * @property {(path: string) => Promise<string>} readText
  * @property {(path: string, text: string) => Promise<void>} writeText
  * @property {(path: string) => Promise<void>} makeDirectory
+ * @property {(path: string) => Promise<void>} remove  A file or an empty folder; nothing if it is missing.
  * @property {(path: string) => Promise<{ type: "regular" | "directory" | "other", size: number }>} stat
  * @property {(path: string) => Promise<string[]>} children  Absolute paths of a directory's entries.
  * @property {(path: string) => string} basename
@@ -68,8 +69,35 @@ export function createGeckoFileStore({ IOUtils, PathUtils, Zotero }) {
 			const { type, size } = await IOUtils.stat(path);
 			return { type, size };
 		},
+		// Not recursive: a folder with something in it is never removed.
+		remove: (path) => IOUtils.remove(path, { ignoreAbsent: true }),
 		children: (path) => IOUtils.getChildren(path),
 		basename: (path) => PathUtils.filename(path),
 		md5: (path) => Zotero.Utilities.Internal.md5Async(path),
+	};
+}
+
+/**
+ * Creates a link `link` that shows the folder `target`. On Windows a directory
+ * junction (`mklink /J`), which unlike a symbolic link needs no admin rights
+ * or developer mode; elsewhere a symbolic link. Gecko has no API for either,
+ * so the system's own command runs.
+ * @returns {(link: string, target: string) => Promise<void>}
+ */
+export function createLinkMaker({ Zotero, Services }) {
+	return async (link, target) => {
+		if (Zotero.isWin) {
+			let shell = "";
+			try {
+				shell = Services.env.get("ComSpec");
+			}
+			catch {
+				// Services.env is missing in older Gecko versions; cmd.exe has a fixed home.
+			}
+			await Zotero.Utilities.Internal.exec(shell || PROJECT_FOLDER.windowsShell, ["/c", "mklink", "/J", link, target]);
+		}
+		else {
+			await Zotero.Utilities.Internal.exec(PROJECT_FOLDER.symlinkCommand, ["-s", target, link]);
+		}
 	};
 }

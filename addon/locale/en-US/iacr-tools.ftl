@@ -46,6 +46,8 @@ iacr-tools-menu-add-list-here =
     .label = From a List…
 iacr-tools-menu-import-folder-here =
     .label = From a Folder of PDFs…
+iacr-tools-menu-link-project-folder =
+    .label = Link Project Folder…
 
 ## File menu
 
@@ -221,6 +223,33 @@ iacr-tools-latex-exported = { $count ->
         [0] .
        *[other] ; { $inCryptoBib } others are in CryptoBib.
     }
+
+## Linking a project folder
+
+iacr-tools-project-title = Link Project Folder
+iacr-tools-project-no-collection = Right-click the project's collection to link a project folder to it.
+iacr-tools-project-pick-folder = Choose the project folder for “{ $name }”
+iacr-tools-project-confirm = Link the project folder { $folder } to the collection “{ $name }”?
+iacr-tools-project-accept = Link
+iacr-tools-project-nothing-to-do = Nothing to do for { $folder } and “{ $name }”:
+iacr-tools-project-name-differs = Note: the folder is called “{ $folder }”, the collection “{ $name }”.
+iacr-tools-project-papers-create = PDFs: { $link } becomes a link to ZotMoov's folder { $target }, so the PDFs of “{ $name }” appear in the project.
+iacr-tools-project-papers-replace = PDFs: the empty folder { $link } is replaced by a link to ZotMoov's folder { $target }, so the PDFs of “{ $name }” appear in the project.
+iacr-tools-project-papers-linked = PDFs: { $link } already shows ZotMoov's folder { $target }.
+iacr-tools-project-papers-occupied = PDFs: { $link } already exists and does not show ZotMoov's folder { $target }. It is left alone; move it away (or empty it) to link it.
+iacr-tools-project-papers-unavailable = PDFs: no link, { $reason }
+iacr-tools-project-zotmoov-missing = because ZotMoov is not installed.
+iacr-tools-project-zotmoov-no-folder = because ZotMoov has no directory set (Settings → ZotMoov).
+iacr-tools-project-zotmoov-subfolders = because ZotMoov does not file PDFs in a folder per collection: in Settings → ZotMoov, turn on subdirectories with {"{"}%c{"}"}.
+iacr-tools-project-bib-create = Bibliography: Better BibTeX keeps { $path } updated with the papers of “{ $name }”.
+iacr-tools-project-bib-replace = Bibliography: Better BibTeX keeps { $path } updated with the papers of “{ $name }”. The file that is there now is overwritten.
+iacr-tools-project-bib-exported = Bibliography: Better BibTeX already keeps { $path } updated with “{ $name }”.
+iacr-tools-project-bib-occupied = Bibliography: Better BibTeX already exports something else to { $path }. It is left alone; remove that export under Settings → Better BibTeX → Automatic Export to link it.
+iacr-tools-project-bib-unavailable = Bibliography: not kept updated, because Better BibTeX is not installed.
+iacr-tools-project-papers-created = { $link } now shows ZotMoov's folder { $target }.
+iacr-tools-project-papers-failed = The link { $link } could not be created: { $error }
+iacr-tools-project-bib-created = Better BibTeX now keeps { $path } updated with “{ $name }”; it writes the file in a moment.
+iacr-tools-project-bib-failed = The export to { $path } could not be set up: { $error }
 
 ## Commands on a collection or library
 

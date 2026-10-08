@@ -92,6 +92,9 @@ export const MENU_LAYOUT = Object.freeze([
 			{ id: "import-folder-here", collection: (plugin, context) => plugin.importFolder(context) },
 		],
 	},
+	"separator",
+	// Collections only: the separator before it is dropped on papers.
+	{ id: "link-project-folder", collection: (plugin, context) => plugin.linkProjectFolder(context) },
 ]);
 
 /**

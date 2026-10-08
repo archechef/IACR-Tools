@@ -16,6 +16,8 @@ A Zotero 8–10 plugin for cryptographers:
 
 - **Add papers from a list.** Paste (or open) a list of ePrint ids, DOIs, CryptoBib keys or titles and the plugin adds those papers, with their ePrint PDFs. Sections such as `[Signatures]` file the papers into subcollections, and papers already in the collection can be moved to where the list says they belong.
 
+- **Link a LaTeX project folder to its collection.** The project's `refs/papers` shows the collection's PDFs (as filed by ZotMoov), and Better BibTeX keeps `refs/references.bib` up to date.
+
 - **Copy papers out as a list.** The same format in the other direction: select papers (or a collection, with its subcollections as sections) and put them on the clipboard for a chat, a mail or a to-do list.
 
 ## Installation
@@ -79,6 +81,22 @@ JC:LibYun20
 
 **ZotMoov.** [ZotMoov](https://github.com/wileyyugioh/zotmoov) files PDFs in a folder per collection (`{%c}`) when they are added, but does not move them again when a paper changes collection. After reorganizing, the plugin asks ZotMoov to move the files of the moved papers into the folder of their new subcollection, as ZotMoov's own *Move Selected to Directory* would. This happens only when ZotMoov is installed and set to move (not copy) files into subdirectories, only for files ZotMoov already manages, and not for papers that are also in a collection outside the selected one (their file belongs to the other project as well). It can be switched off in the preferences. New papers need no help: ZotMoov uses the subcollection a paper was added to.
 
+## Linking a project folder
+
+A LaTeX project that cites the papers of one collection needs two links to Zotero. **IACR → Link Project Folder…** (right-click the project's collection) creates both:
+
+- **`refs/papers`** becomes a link to the folder where [ZotMoov](https://github.com/wileyyugioh/zotmoov) files the collection's PDFs, so they appear inside the project. With ZotMoov's directory `C:\Users\me\Documents\Zotero` and subdirectory `{%c}`, the collection *Phd → Project* gets `C:\Users\me\Documents\Zotero\Phd\Project` (created if missing), and a topic's PDFs show up in `refs/papers/<Topic>`. On Windows the link is a directory junction (`mklink /J`, no admin rights needed), elsewhere a symbolic link.
+- **`refs/references.bib`** is exported by Better BibTeX with **Keep updated**, just as *right-click → Export Collection… → Better BibTeX* would set it up. Better BibTeX writes the file a moment later and again whenever the collection changes. Like Better BibTeX's own export of a collection, it includes the papers of subcollections only when Zotero's *View → Show Items from Subcollections* is on.
+
+You pick the project folder, the plugin says what it will do and acts only after you confirm. It never replaces what is already there:
+
+- a `refs/papers` that already shows ZotMoov's folder, or an export that already writes this collection to `references.bib`, is reported as done;
+- any other `refs/papers` (except an empty folder, which is replaced), or another export to that file, is left alone and reported;
+- an existing `references.bib` that no export writes is overwritten by the new export (the confirmation says so);
+- if ZotMoov is missing or does not sort PDFs by `{%c}`, or Better BibTeX is missing, that half is skipped and the reason given.
+
+Running the command again changes nothing, so it also serves to check a project's links. The confirmation notes when the folder and the collection have different names.
+
 ## PDFs through the DOI
 
 Published papers without an IACR ePrint version can still get a PDF: the plugin hands them to Zotero's own **Find Full Text** (*right-click → Find Full Text*), which tries
@@ -139,6 +157,7 @@ Right-click papers, or a collection, → **IACR**. On papers the commands apply 
   - **Link ePrint and Published Versions**: marks the two versions of a paper as related items (by shared ePrint id, or by title and authors).
 - **Copy & Export**: **Copy as List**, **Copy LaTeX Citation**, **Export BibTeX (Not in CryptoBib)…**
 - **Add Papers** (collections only): **From a List…**, **From a Folder of PDFs…**, into this collection.
+- **Link Project Folder…** (collections only): links a project folder's `refs/papers` and `refs/references.bib` to the collection ([above](#linking-a-project-folder)).
 
 Elsewhere:
 

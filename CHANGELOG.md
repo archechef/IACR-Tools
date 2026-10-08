@@ -2,6 +2,10 @@
 
 All releases are on [GitHub](https://github.com/archechef/IACR-Tools/releases); installed copies update themselves.
 
+## Unreleased
+
+- **Link Project Folder…** (IACR menu of a collection) connects a LaTeX project folder to its collection: `refs/papers` becomes a link (a directory junction on Windows) to the folder ZotMoov files the collection's PDFs in, and Better BibTeX keeps `refs/references.bib` updated with the collection's papers. It asks first and never replaces what is there.
+
 ## 1.6.3 — 2026-10-07
 
 - The IACR ePrint archive now puts a Cloudflare check in front of its PDFs, so downloading them from Zotero no longer works (pages and search do). **Download Missing PDFs in Browser…** now also takes papers with an ePrint version: their `eprint.iacr.org/YYYY/NNN.pdf` links open in your browser and the PDFs you save are attached (matched by the number or id in the file name). **Download ePrint PDF** and **Check for Revised PDF** say what is going on when the archive refuses them, instead of a generic error.

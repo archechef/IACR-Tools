@@ -20,7 +20,8 @@ import { LatexSupport } from "./zotero/latex.js";
 import { LibraryIndex } from "./zotero/library-index.js";
 import { createVersionActions } from "./zotero/versions.js";
 import { Pipeline } from "./zotero/pipeline.js";
-import { createGeckoFileStore, createZoteroHttp } from "./zotero/platform.js";
+import { createGeckoFileStore, createLinkMaker, createZoteroHttp } from "./zotero/platform.js";
+import { ProjectFolders } from "./zotero/project-folder.js";
 import { Prefs } from "./zotero/prefs.js";
 import { convertSpringerAction } from "./zotero/springer.js";
 import { ZotMoovFiles } from "./zotero/zotmoov.js";
@@ -154,6 +155,7 @@ export class IACRTools {
 			log: this.log,
 		});
 		this.zotmoov = new ZotMoovFiles({ Zotero, log: this.log });
+		this.projectFolders = new ProjectFolders({ Zotero, files, makeLink: createLinkMaker({ Zotero, Services }), log: this.log });
 		this.browserDownloads = new BrowserDownloads({ Zotero, files, timers, openURL: (url) => Zotero.launchURL(url), log: this.log });
 		this.folderImporter = new FolderImporter({
 			Zotero,
@@ -500,6 +502,74 @@ export class IACRTools {
 			if (!answer.confirmed) return null;
 		}
 		return { entries, download: answer.checked, reorganize: false };
+	}
+
+	/**
+	 * Collection menu: links a project folder on disk to the collection. Its
+	 * refs/papers shows the folder ZotMoov files the collection's PDFs in, and
+	 * Better BibTeX keeps refs/references.bib updated with its papers. Says
+	 * what it will do and asks first; leaves alone what is already there.
+	 */
+	async linkProjectFolder(context) {
+		const { Zotero, l10n } = this;
+		const { window, collection } = resolveImportTarget(Zotero, context);
+		const title = l10n.format("project-title");
+		if (!collection) {
+			this.dialogs.alert(window, title, l10n.format("project-no-collection"));
+			return null;
+		}
+		const folder = await this.dialogs.pickFolder(window, l10n.format("project-pick-folder", { name: collection.name }));
+		if (!folder) return null;
+		let plan;
+		try {
+			plan = await this.projectFolders.plan(collection, folder);
+		}
+		catch (e) {
+			this.log(`Looking at the project folder ${folder} failed: ${e}\n${e.stack ?? ""}`);
+			this.dialogs.alert(window, title, String(e?.message ?? e));
+			return null;
+		}
+		const name = collection.name;
+		const lines = [this.#papersLine(plan.papers, name), this.#bibliographyLine(plan.bibliography, name)];
+		if (plan.papers.state !== "create" && plan.bibliography.state !== "create") {
+			this.dialogs.alert(window, title, [l10n.format("project-nothing-to-do", { folder, name }), ...lines].join("\n\n"));
+			return { plan, outcome: null };
+		}
+		const folderName = this.files.basename(folder);
+		const answer = this.dialogs.confirm(window, {
+			title,
+			text: [
+				l10n.format("project-confirm", { folder, name }),
+				...lines,
+				...(folderName.trim().toLowerCase() === name.trim().toLowerCase() ? [] : [l10n.format("project-name-differs", { folder: folderName, name })]),
+			].join("\n\n"),
+			accept: l10n.format("project-accept"),
+		});
+		if (!answer.confirmed) return null;
+		const outcome = await this.projectFolders.apply(plan);
+		const report = (kind, result, args) => (result.state === "created"
+			? l10n.format(`project-${kind}-created`, args)
+			: l10n.format(`project-${kind}-failed`, { ...args, error: result.error ?? "" }));
+		this.dialogs.alert(window, title, [
+			...(outcome.papers.state === "unchanged" ? [] : [report("papers", outcome.papers, { link: plan.papers.link, target: plan.papers.target ?? "" })]),
+			...(outcome.bibliography.state === "unchanged" ? [] : [report("bib", outcome.bibliography, { path: plan.bibliography.path, name })]),
+		].join("\n\n"));
+		return { plan, outcome };
+	}
+
+	/** @param {import("./zotero/project-folder.js").PapersPlan} papers */
+	#papersLine({ link, target, state, reason, replacesEmptyFolder }, name) {
+		const { l10n } = this;
+		if (state === "unavailable") return l10n.format("project-papers-unavailable", { reason: l10n.format(`project-${reason}`) });
+		const args = { link, target: target ?? "", name };
+		if (state === "create") return l10n.format(replacesEmptyFolder ? "project-papers-replace" : "project-papers-create", args);
+		return l10n.format(`project-papers-${state}`, args);
+	}
+
+	/** @param {import("./zotero/project-folder.js").BibliographyPlan} bibliography */
+	#bibliographyLine({ path, state, replacesFile }, name) {
+		const id = state === "create" && replacesFile ? "project-bib-replace" : `project-bib-${state}`;
+		return this.l10n.format(id, { path, name });
 	}
 
 	/**

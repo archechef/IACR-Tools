@@ -105,6 +105,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `eprint-page.js` | metadata and revision time from an ePrint paper page's meta tags |
 | `extra.js` | `Key: value` lines in Zotero's Extra field |
 | `pdf-text.js` | DOIs / ePrint ids in PDF text and file names; identifying a PDF in CryptoBib |
+| `project-folder.js` | the folder ZotMoov's `{%c}` gives a collection (its file-name sanitizer), path comparison |
 | `downloads.js` | browser downloads: the link to open for a paper (ePrint PDF or DOI), and which paper a downloaded file's name names |
 | `list.js`, `list-format.js` | reading lists: parse (including `[Section]` lines and collection paths) and write (flat, or with a section per subcollection) |
 | `duplicates.js` | grouping papers into copies and versions |
@@ -114,7 +115,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 
 | File | Purpose |
 |---|---|
-| `platform.js` | the only adapters to Zotero.HTTP and IOUtils/PathUtils (`Http`, `FileStore`) |
+| `platform.js` | the only adapters to Zotero.HTTP and IOUtils/PathUtils (`Http`, `FileStore`), and `createLinkMaker` (directory links through the system's own command) |
 | `prefs.js` | typed preferences over `PREFS` in config.js (`eprintKey()`: the Extra key of ePrint ids) |
 | `item.js` | `ItemWrapper`: base-field resolution, Extra fallback, type conversion, related items, citation key, attached PDFs; all item edits go through it |
 | `pipeline.js` | actions, `ItemContext`, `Pipeline` (`runOnItem`: one item, the details worth reporting) |
@@ -128,6 +129,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `doi-pdf.js` | `DoiPdfAction`: the PDF of a paper without an ePrint version through Zotero's Find Full Text, one request at a time |
 | `browser-download.js` | `BrowserDownloads`: opens PDF links in the user's browser and attaches the PDFs that appear in the Downloads folder |
 | `zotmoov.js` | asks ZotMoov to move the files of papers the list import moved between collections |
+| `project-folder.js` | `ProjectFolders`: links a project folder to a collection (`refs/papers` → ZotMoov's folder, Better BibTeX's auto-export of `refs/references.bib`); `plan()` changes nothing, `apply()` creates what is missing |
 | `latex.js` | `\cite` keys and the BibTeX export of papers CryptoBib lacks |
 | `duplicates.js` | `DuplicateFinder`: find groups, merge copies, merge a preprint into its published version, link versions, dismiss |
 | `auto-processor.js` | processing of newly added items |
@@ -158,6 +160,7 @@ All three use system colours (`Canvas`, `Field`, `GrayText`, `AccentColor`, `lig
 | `list-import.test.js`, `folder-import.test.js` | the imports |
 | `versions.test.js` | preprint upgrade, version links, revision check, LaTeX |
 | `duplicates.test.js` | grouping, `DuplicateFinder`, `DuplicatesView` |
+| `project-folder.test.js` | Link Project Folder, on a real temporary folder (Node makes the junction) |
 | `concurrency.test.js`, `progress.test.js`, `list-dialog.test.js` | helpers, the progress view, the paste box script |
 | `bundle.test.js` | the **built** plugin in a VM: bootstrap, chrome registration, menus, commands, windows, preferences, shutdown |
 
@@ -220,6 +223,7 @@ Verified while building the plugin, against Zotero 10.0.3's own source (`omni.ja
 - **Collection membership**: `item.getCollections()` (ids of the collections the item is directly in), `item.addToCollection(id)` / `item.removeFromCollection(id)`, saved with `item.saveTx()`. `new Zotero.Collection({ name, libraryID, parentID })`; `Zotero.Collections.getByParent(id)` / `getByLibrary(libraryID)` (top level); a top-level collection's `parentID` is `false`.
 - **Attaching a file**: `Zotero.Attachments.importFromFile({ file, parentItemID, fileBaseName })` copies a file into storage under a parent (`parentItemID` and `collections` must not both be given); `fileBaseName` renames the copy. Zotero renames new files itself when `Zotero.Attachments.shouldAutoRenameFile(false, libraryID)` and `isRenameAllowedForType(contentType, libraryID)` hold, to `getFileBaseNameFromItem(parent)`.
 - **Downloads folder**: `ChromeUtils.importESModule("resource://gre/modules/Downloads.sys.mjs").Downloads.getSystemDownloadsDirectory()` (Firefox's module, shipped in Zotero's own `omni.ja`); passed to the plugin as `downloadsDirectory` from `src/index.js`. `Zotero.launchURL(url)` opens a link in the system's default browser.
+- **Running a program**: `Zotero.Utilities.Internal.exec(path, args)` (nsIProcess `runwAsync`; rejects on a non-zero exit status). Gecko has no API for directory junctions or symbolic links, so Link Project Folder runs `cmd.exe /c mklink /J <link> <target>` (`ComSpec`, read through `Services.env`) or `/bin/ln -s <target> <link>`. Arguments with spaces are quoted; `cmd /c` keeps those quotes because the command line after `/c` does not start with one (checked with Node's identical quoting and paths containing spaces).
 - **Find Full Text**: `Zotero.Attachments.addAvailableFile(item, { methods })` (Zotero 7+; `addAvailablePDF` is deprecated) tries resolvers in order — `doi` (the `https://doi.org/<DOI>` page, fetched with `Zotero.HTTP.request` and its redirects followed, so IP-based institutional access applies), `url` (the item's URL), `oa` (Unpaywall via `Zotero.Utilities.Internal.getOpenAccessPDFURLs`), `custom` (the JSON preference `extensions.zotero.findPDFs.resolvers`) — and returns the new attachment or `false`. It may show a CAPTCHA dialog. It does not throttle by itself: only the batch version `addAvailableFiles` (the context menu, with its own queue window) spaces requests to the same domain by 1 s. `canFindFileForItem` requires a DOI, URL or PMCID and no PDF/EPUB attachment.
 - **Export translators**: Zotero's BibTeX is `9cb70025-a888-4a29-a210-93ec52da40d4` and uses an item's `citationKey` field or a `Citation Key:` line in Extra when present; Better BibTeX is `ca65189f-8815-4afe-8c8b-8c7c15f0edca`, its pinned keys come from `Zotero.BetterBibTeX.KeyManager.get(itemID)?.citationKey`.
 
@@ -231,6 +235,15 @@ Read from ZotMoov 1.2.32's source (`zotmoov@wileyy.com.xpi` in the Zotero profil
 - **`{%c}`** (subdirectory wildcard) uses the item's collection whose id is `preferred_collection`, else the item's *first* collection. `getBasePrefs()` sets `preferred_collection` to the collection selected in the pane, so new papers filed only in a subcollection land in that subcollection's folder.
 - **`move(attachments, dst_dir, options)`** re-links each file attachment to `<dst_dir>/<subdirectory>/<renamed file>` (skipping ones already there and libraries other than My Library). The plugin passes `{ ...getBasePrefs(), preferred_collection }` and only linked files, so it never races the auto-move.
 - Preferences: `extensions.zotmoov.dst_dir`, `file_behavior` (`"move"` / `"copy"`), `enable_subdir_move`, `subdirectory_string`.
+
+- **`{%c}`** builds the path from the collection up through its parents (at most 10 levels), each name through ZotMoov's `Sanitizer.sanitize(name, "_")` (`lib/02-sanitize-filename.js`: `/?<>\:*|"` and control characters become `_`, as do names made only of dots, Windows device names and trailing dots or spaces), optionally without diacritics (`strip_diacritics`). `core/project-folder.js` mirrors this to find a collection's folder. Preferences: `subdirectory_string` (default `{%c}`), `strip_diacritics`.
+
+### Better BibTeX
+
+Read from Better BibTeX 9.0.71's source (`better-bibtex@iris-advies.com.xpi`). It exposes `Zotero.BetterBibTeX`, with `ready` (a promise) and `AutoExport`:
+
+- `AutoExport.all()` lists the "Keep updated" exports (`path`, `type` `"collection"` / `"library"`, `id`, `translatorID`, …) and `AutoExport.get(path)` returns one of them; exports are keyed by path.
+- `AutoExport.add(entry, schedule)` registers one and, with `schedule`, runs it soon. Its scripting API (`NSAutoExport.add`) passes `{ enabled, type: "collection", id, path, status: "done", recursive: false, created, updated, error: "", translatorID, exportNotes, useJournalAbbreviation }`; Link Project Folder passes the same. `recursive` means one extra file per subcollection, not "include subcollections".
 
 ### IACR ePrint, dblp, CryptoBib
 
@@ -263,4 +276,5 @@ The GitHub Actions are pinned to commit hashes (with the version as a comment); 
 - **The ACM Digital Library** (`dl.acm.org`) answers every non-browser request, including `doi.org` redirects to it, with HTTP 403 and a Cloudflare challenge page (`cf-mitigated: challenge`, checked October 2026). Only a person's browser gets through, hence the browser download. Matching its files relies on the file name (the DOI's suffix for ACM); a renamed download whose name says nothing is only matched when one link is open.
 - **ePrint PDFs** (`eprint.iacr.org/YYYY/NNN.pdf`, also the `/archive/…` and versioned URLs, whatever the User-Agent) answer non-browser requests with HTTP 403 and a Cloudflare challenge (`cf-mitigated: challenge`, checked October 2026); pages, search and the RSS feed are not challenged. `download-eprint` and `check-eprint-revision` therefore report a refusal (`EPRINT.blockedDetail`) and the browser download fetches those PDFs. A browser saves `…/2024/001.pdf` as `001.pdf`, which matches a paper by its number alone when no other open paper has that number. The attachment imported from a file has no URL, so the revision check does not see it as an ePrint PDF. If IACR lifts the check, the direct download works again unchanged.
 - **Browser downloads** only see the folder they watch: a browser set to ask where to save, or to open PDFs without saving them, needs the user to save into that folder.
+- **Link Project Folder** has only run against a fake Zotero, ZotMoov and Better BibTeX (with a real junction made by Node). It relies on Better BibTeX's internal `AutoExport` and on ZotMoov's `{%c}` naming, and reports the link as not possible when ZotMoov's subdirectory is anything other than `{%c}`.
 - **Only an English locale** (`en-US`); another language is a new `.ftl` file under `addon/locale/<locale>/`.

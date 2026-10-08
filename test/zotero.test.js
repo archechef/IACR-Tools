@@ -423,6 +423,9 @@ test("every Fluent id used by the plugin exists in the locale file", () => {
 		...COMMANDS.flatMap(({ id }) => [`menu-${id}`, `progress-${id}`]),
 		...["changed", "unchanged", "skipped", "failed"].map((s) => `status-${s}`),
 		...["downloading", "indexing", "ready"].map((s) => `store-${s}`),
+		...["linked", "occupied", "created", "failed"].map((s) => `project-papers-${s}`),
+		...["create", "exported", "occupied", "unavailable", "created", "failed"].map((s) => `project-bib-${s}`),
+		...["missing", "no-folder", "subfolders"].map((s) => `project-zotmoov-${s}`),
 	];
 	const prefPane = [...read("addon/content/preferences.xhtml").matchAll(/__L10N_PREFIX__-([a-z0-9-]+)/g)]
 		.map((m) => m[1]).filter((id) => !id.endsWith("prefs") && id !== "update-cryptobib");

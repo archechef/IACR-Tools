@@ -370,9 +370,32 @@ export const ZOTMOOV = Object.freeze({
 		directory: "extensions.zotmoov.dst_dir",
 		fileBehavior: "extensions.zotmoov.file_behavior",
 		subdirectories: "extensions.zotmoov.enable_subdir_move",
+		subdirectoryString: "extensions.zotmoov.subdirectory_string",
+		stripDiacritics: "extensions.zotmoov.strip_diacritics",
 	}),
+	/** The subdirectory wildcard for "the paper's collection path" (Phd/Project/Topic). */
+	collectionWildcard: "{%c}",
+	/** ZotMoov follows a collection's parents up to this many levels. */
+	maxCollectionDepth: 10,
 	/** The file behaviour under which files are moved (the other one, "copy", leaves copies behind). */
 	moveBehavior: "move",
+});
+
+/**
+ * Linking a project folder on disk to its Zotero collection: the folder's
+ * refs/papers shows the collection's ZotMoov folder (a directory junction on
+ * Windows, a symbolic link elsewhere), and Better BibTeX keeps
+ * refs/references.bib updated with the collection's papers.
+ */
+export const PROJECT_FOLDER = Object.freeze({
+	refsFolder: "refs",
+	papersFolder: "papers",
+	bibliographyFile: "references.bib",
+	/** A short-lived file written into the papers folder to see whether the link shows it. */
+	probeFile: (suffix) => `.iacr-tools-link-check-${suffix}`,
+	/** Windows' command interpreter, when the ComSpec variable is not set. */
+	windowsShell: "C:\\Windows\\System32\\cmd.exe",
+	symlinkCommand: "/bin/ln",
 });
 
 /** LaTeX: \cite keys and a BibTeX file for the papers that crypto.bib lacks. */

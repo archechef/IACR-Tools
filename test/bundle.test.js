@@ -6,7 +6,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
-import { mkdir, readFile, writeFile, access, readdir, stat } from "node:fs/promises";
+import { mkdir, readFile, writeFile, access, readdir, rm, rmdir, lstat, stat, symlink } from "node:fs/promises";
 import { createHash } from "node:crypto";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
@@ -109,6 +109,7 @@ function createEnvironment(dataDir) {
 	});
 	const Services = {
 		io: { newURI: (spec) => ({ spec }) },
+		env: { get: (name) => (name === "ComSpec" ? "C:\\Windows\\system32\\cmd.exe" : "") },
 		prefs: {
 			getDefaultBranch: () => ({
 				setBoolPref: (k, v) => defaults.set(k, v),
@@ -133,6 +134,12 @@ function createEnvironment(dataDir) {
 			return { type: s.isDirectory() ? "directory" : "regular", size: s.size };
 		},
 		getChildren: async (path) => (await readdir(path)).map((name) => join(path, name)),
+		// Not recursive, as the plugin calls it: a folder must be empty.
+		async remove(path) {
+			const s = await lstat(path).catch(() => null);
+			if (s?.isDirectory()) await rmdir(path);
+			else if (s) await rm(path);
+		},
 	};
 	const PathUtils = { join, filename: basename };
 	Zotero.Utilities.Internal.md5Async = async (path) => createHash("md5").update(await readFile(path)).digest("hex");
@@ -430,6 +437,38 @@ test("the built plugin starts, registers its UI and runs its commands", { skip: 
 	assert.match(asked.at(-1).text, /browser-confirm .*"count":1/);
 	assert.equal(env.Zotero.launched.length, launched, "nothing opened without a yes");
 	plugin.dialogs.confirm = confirmAll;
+
+	// Link Project Folder (collections only): refs/papers becomes a junction to
+	// the collection's ZotMoov folder (`mklink /J`, run through Zotero's exec)
+	// and Better BibTeX keeps refs/references.bib updated.
+	assert.ok(!submenu.some((m) => m.l10nID?.endsWith("menu-link-project-folder")), "not on papers");
+	const linkProject = collectionSubmenu.find((m) => m.l10nID?.endsWith("menu-link-project-folder"));
+	const projectFolder = join(dataDir, "project");
+	await mkdir(projectFolder);
+	plugin.dialogs.pickFolder = async () => projectFolder;
+	env.Zotero.isWin = true;
+	env.Zotero.ZotMoov = {};
+	env.Zotero.Prefs.set("extensions.zotmoov.dst_dir", join(dataDir, "Zotero"));
+	env.Zotero.Prefs.set("extensions.zotmoov.enable_subdir_move", true);
+	env.Zotero.Prefs.set("extensions.zotmoov.subdirectory_string", "{%c}");
+	const exported = [];
+	env.Zotero.BetterBibTeX = { ready: Promise.resolve(), AutoExport: { all: () => exported, add: async (entry) => exported.push(entry) } };
+	const commands = [];
+	env.Zotero.Utilities.Internal.exec = async (cmd, args) => {
+		commands.push([cmd, ...args]);
+		await symlink(args[4], args[3], "junction");
+	};
+	await linkProject.onCommand(null, targetRow);
+	assert.match(asked.at(-2).text, /project-confirm .*project-papers-create .*project-bib-create .*project-name-differs/s);
+	assert.match(asked.at(-1).text, /project-papers-created .*project-bib-created/s);
+	const papersLink = join(projectFolder, "refs", "papers");
+	assert.deepEqual(JSON.parse(JSON.stringify(commands)), [["C:\\Windows\\system32\\cmd.exe", "/c", "mklink", "/J", papersLink, join(dataDir, "Zotero", target.name)]]);
+	assert.equal(exported[0].path, join(projectFolder, "refs", "references.bib"));
+	assert.equal(exported[0].id, target.id);
+	await linkProject.onCommand(null, targetRow);
+	assert.match(asked.at(-1).text, /project-nothing-to-do .*project-papers-linked .*project-bib-exported/s, "a second run changes nothing");
+	assert.equal(commands.length, 1);
+	env.Zotero.isWin = false;
 
 	await vm.runInContext("shutdown({}, 1)", scope);
 	assert.equal(env.Zotero[PLUGIN.globalName], undefined);
