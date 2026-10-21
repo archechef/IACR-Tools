@@ -87,7 +87,7 @@ function escapeRegExp(s) {
 }
 
 function applyAccent(accent, letter) {
-	const base = SYMBOL_COMMANDS[letter.replace(/^\\/, "")] ?? letter;
+	const base = letter.startsWith("\\") ? SYMBOL_COMMANDS[letter.slice(1)] ?? letter : letter;
 	// Accents on dotless i/j are written \'{\i}; the accent replaces the dot.
 	const plain = base === "ı" ? "i" : base === "ȷ" ? "j" : base;
 	return (plain + COMBINING_ACCENTS[accent]).normalize("NFC");

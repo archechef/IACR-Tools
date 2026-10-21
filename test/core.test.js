@@ -55,6 +55,9 @@ test("LaTeX is converted to Unicode and Zotero rich text", () => {
 	assert.equal(latexToText("Kilin{\\c c}"), "Kilinç");
 	assert.equal(latexToText("{\\textcommabelow{S}}tefan"), "Ștefan");
 	assert.equal(latexToText("Gj{\\o}steen and {\\'\\i}"), "Gjøsteen and í");
+	assert.equal(latexToText("J{\\\"o}rg {\\\"O}zt{\\\"u}rk"), "Jörg Öztürk");
+	assert.equal(latexToText("J\\\"org Gr{\\'o}f Erd{\\H{o}}s {\\'{\\o}}"), "Jörg Gróf Erdős ǿ");
+	assert.equal(latexToText("{\\v{L}}ubom{\\'\\i}r Ga{\\v l}a"), "Ľubomír Gaľa");
 	assert.equal(latexToText("Advances in Cryptology -- {EUROCRYPT}~2008"), "Advances in Cryptology – EUROCRYPT 2008");
 	assert.equal(latexToText("A Novel Window {$\\tau$NAF} on Koblitz Curves"), "A Novel Window τNAF on Koblitz Curves");
 	assert.equal(latexToText("over $\\mathbb{F}_p$", { rich: true }), "over 𝔽<sub>p</sub>");
